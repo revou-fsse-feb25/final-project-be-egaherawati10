@@ -8,7 +8,7 @@ import { IMedicalRecordsService, MEDICAL_RECORDS_SERVICE } from './medical-recor
 
 @ApiTags('medical-records')
 @ApiBearerAuth()
-@Controller() // base path provided by RouterModule: /medical-records
+@Controller() // RouterModule: /medical-records
 export class MedicalRecordsItemsController {
   constructor(
     @Inject(MEDICAL_RECORDS_SERVICE)

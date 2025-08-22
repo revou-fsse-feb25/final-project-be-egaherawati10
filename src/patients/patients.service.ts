@@ -59,11 +59,9 @@ export class PatientsService {
       });
       return this.toResponse(created);
     } catch (e: any) {
-      // unique violation on userId (1:1)
       if (e?.code === 'P2002') {
         throw new ConflictException('Patient profile already exists for this user');
       }
-      // FK violations (e.g., clerk)
       if (e?.code === 'P2003') {
         throw new BadRequestException('Invalid foreign key');
       }

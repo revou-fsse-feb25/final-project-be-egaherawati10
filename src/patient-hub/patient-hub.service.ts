@@ -29,15 +29,13 @@ export class PatientHubService {
         select: {
           id: true, code: true, patientId: true, doctorId: true, medicalRecordId: true,
           status: true, serviceDate: true, createdAt: true, updatedAt: true,
-          // Optional: include lines summary (count)
           _count: { select: { serviceItems: true } },
         },
       }),
       this.prisma.service.count({ where }),
     ]);
 
-    // (Optional) derive totals per service (sum quantity*unitPrice)
-    // Keep it simple & precise; optimize later if needed
+    // Totals per service (sum quantity*unitPrice)
     const ids = rows.map(r => r.id);
     const lines = await this.prisma.serviceOnServiceItem.findMany({
       where: { serviceId: { in: ids } },

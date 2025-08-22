@@ -40,5 +40,4 @@ export interface IMedicalRecordsService {
   delete(id: number): Promise<void>;
 }
 
-/** Nest injection token so we can inject by interface */
 export const MEDICAL_RECORDS_SERVICE = Symbol('MEDICAL_RECORDS_SERVICE');

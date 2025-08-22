@@ -40,7 +40,7 @@ export class MedicalRecordsService implements IMedicalRecordsService {
     if (!me || me.id !== patientId) throw new NotFoundException('Medical record not found');
   }
 
-  // ---------- Patient-scoped collection ----------
+  // Patient-scoped collection
   async listForPatient(patientId: number, q: QueryMedicalRecordDto, currentUser: { id: number; role: string }) {
     await this.getPatientProfile(patientId);
     await this.assertPatientScopeForPatientUser(currentUser, patientId);
@@ -104,7 +104,7 @@ export class MedicalRecordsService implements IMedicalRecordsService {
     return this.toDto(created);
   }
 
-  // ---------- Canonical items ----------
+  // Canonical items
   async findById(id: number, currentUser: { id: number; role: string }) {
     const mr = await this.repo.findById(id);
     if (!mr) throw new NotFoundException('Medical record not found');

@@ -3,7 +3,6 @@ import { Gender } from '@prisma/client';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class UpdatePatientDto {
-  // userId cannot be changed (1:1)
   @ApiPropertyOptional() @IsOptional() @IsDateString()
   dob?: string;
 
@@ -17,5 +16,5 @@ export class UpdatePatientDto {
   phone?: string;
 
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1)
-  clerkId?: number | null; // allow clearing
+  clerkId?: number | null;
 }
