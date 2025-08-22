@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -18,7 +17,6 @@ export class UsersService implements IUsersService {
   constructor(private readonly repo: IUsersRepository) {}
 
   private toResponse(u: any): UserResponseDto {
-    // Already selected to safe fields in repo
     return u as UserResponseDto;
   }
 
