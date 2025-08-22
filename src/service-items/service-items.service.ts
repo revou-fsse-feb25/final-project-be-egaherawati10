@@ -17,9 +17,9 @@ import { ServiceItemResponseDto } from './dto/service-item-response.dto';
 @Injectable()
 export class ServiceItemsService implements IServiceItemsService {
   constructor(
-    private readonly prisma: PrismaService, // ✅ inject by type
     @Inject('IServiceItemsRepository')
     private readonly repo: IServiceItemsRepository, // ✅ inject by token
+    private readonly prisma: PrismaService, // ✅ inject by type
   ) {}
 
   private toDto(x: any): ServiceItemResponseDto {
