@@ -1,19 +1,17 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ServiceItemsRepository } from './service-items.repository';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { ServiceItemsService } from './service-items.service';
-import { ServiceItemsController } from './service-items.controller';
-import { SERVICE_ITEMS_SERVICE } from './service-items.service.interface';
+import { ServiceItemsRepository } from './service-items.repository';
 
 @Module({
-  controllers: [ServiceItemsController],
+  imports: [PrismaModule],
   providers: [
-    PrismaService,
     ServiceItemsRepository,
     ServiceItemsService,
-    { provide: 'IServiceItemsRepository', useExisting: ServiceItemsRepository },
-    { provide: SERVICE_ITEMS_SERVICE, useExisting: ServiceItemsService },
+    { provide: 'IServiceItemsRepository', useExisting: ServiceItemsRepository }, // ⬅️ bind token
+    { provide: 'IServiceItemsService', useExisting: ServiceItemsService },       // optional export token
   ],
-  exports: [SERVICE_ITEMS_SERVICE],
+  exports: ['IServiceItemsService'], // if other modules/controllers need the service
+  controllers: [/* your controllers that use @Inject('IServiceItemsService') */],
 })
 export class ServiceItemsModule {}

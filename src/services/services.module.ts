@@ -1,28 +1,21 @@
+// src/services/services.module.ts  (or services.collection.module.ts if that’s where the controller is)
 import { Module } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { ServicesCollectionController } from './services.collection.controller';
+import { ServicesService } from './services.service';
 import { ServicesRepository } from './services.repository';
 import { ServiceLinesRepository } from './service-lines.repository';
-import { ServicesService } from './services.service';
 import { SERVICES_SERVICE } from './services.service.interface';
 
-import { ServicesCollectionController } from './services.collection.controller';
-import { ServicesItemsController } from './services.items.controller';
-import { ServiceLinesCollectionController } from './service-lines.collection.controller';
-import { ServiceLinesItemsController } from './service-lines.items.controller';
-
 @Module({
-  controllers: [
-    ServicesCollectionController,
-    ServicesItemsController,
-    ServiceLinesCollectionController,
-    ServiceLinesItemsController,
-  ],
+  imports: [PrismaModule],
+  controllers: [ServicesCollectionController],
   providers: [
-    PrismaService,
+    // concrete classes
     ServicesRepository,
     ServiceLinesRepository,
     ServicesService,
+    // interface tokens
     { provide: 'IServicesRepository', useExisting: ServicesRepository },
     { provide: 'IServiceLinesRepository', useExisting: ServiceLinesRepository },
     { provide: SERVICES_SERVICE, useExisting: ServicesService },

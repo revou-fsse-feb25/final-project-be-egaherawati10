@@ -1,23 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, UserRole, UserStatus } from '@prisma/client';
+import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IUsersRepository, SafeUserSelect } from './users.repository.interface';
+import { IUsersRepository } from './users.repository.interface';
 
-const safeSelect: SafeUserSelect = {
-  id: true, name: true, username: true, email: true,
-  role: true, status: true, createdAt: true, updatedAt: true,
-};
+// Fields allowed for sorting (matches columns we actually expose/use)
+type SortField = 'createdAt' | 'updatedAt' | 'name' | 'username' | 'email';
+
+// What we return from repo for user reads
+type SafeUser = Omit<User, 'password' | 'tokenVersion'>;
+
+// Ensure the select is exactly a Prisma.UserSelect
+const safeSelect = {
+  id: true,
+  name: true,
+  username: true,
+  email: true,
+  role: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
 
 @Injectable()
 export class UsersRepository implements IUsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.UserCreateInput) {
-    return this.prisma.user.create({ data, select: safeSelect });
+  async create(data: Prisma.UserCreateInput): Promise<SafeUser> {
+    // service already hashes password; we still only select safe fields
+    return this.prisma.user.create({ data, select: safeSelect }) as Promise<SafeUser>;
   }
 
-  async findById(id: number) {
-    return this.prisma.user.findUnique({ where: { id }, select: safeSelect });
+  async findById(id: number): Promise<SafeUser | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: safeSelect,
+    }) as Promise<SafeUser | null>;
   }
 
   async findMany(params: {
@@ -26,9 +43,9 @@ export class UsersRepository implements IUsersRepository {
     status?: UserStatus;
     page: number;
     limit: number;
-    sortBy: 'createdAt' | 'updatedAt' | 'name' | 'username' | 'email';
+    sortBy: SortField;
     order: 'asc' | 'desc';
-  }) {
+  }): Promise<{ data: SafeUser[]; total: number }> {
     const { search, role, status, page, limit, sortBy, order } = params;
 
     const where: Prisma.UserWhereInput = {
@@ -56,29 +73,34 @@ export class UsersRepository implements IUsersRepository {
       this.prisma.user.count({ where }),
     ]);
 
-    return { data, total };
+    return { data: data as SafeUser[], total };
   }
 
-  async update(id: number, data: Prisma.UserUpdateInput) {
+  async update(id: number, data: Prisma.UserUpdateInput): Promise<SafeUser> {
     try {
-      return await this.prisma.user.update({
+      const updated = await this.prisma.user.update({
         where: { id },
         data,
         select: safeSelect,
       });
-    } catch (e: any) {
-      if (e?.code === 'P2025') {
+      return updated as SafeUser;
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        // no rows matched
         throw new NotFoundException('User not found');
       }
       throw e;
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number): Promise<boolean> {
     try {
       await this.prisma.user.delete({ where: { id } });
-    } catch (e: any) {
-      if (e?.code === 'P2025') throw new NotFoundException('User not found');
+      return true;
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('User not found');
+      }
       throw e;
     }
   }

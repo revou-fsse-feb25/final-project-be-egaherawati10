@@ -1,20 +1,18 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from 'src/prisma/prisma.module';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UsersRepository } from './users.repository';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { APP_GUARD, Reflector } from '@nestjs/core';
-import { PolicyGuard } from 'src/common/guards/policy.guard';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [UsersController],
   providers: [
-    PrismaService,
+    UsersService,
+    UsersRepository,
     { provide: 'IUsersRepository', useClass: UsersRepository },
-    { provide: 'IUsersService', useClass: UsersService },
-    Reflector,
-    { provide: APP_GUARD, useClass: PolicyGuard },
+    { provide: 'IUsersService', useExisting: UsersService },
   ],
-  exports: [{ provide: 'IUsersService', useClass: UsersService }],
+  exports: ['IUsersRepository', 'IUsersService'],
 })
 export class UsersModule {}

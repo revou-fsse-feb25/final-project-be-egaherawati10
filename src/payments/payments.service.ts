@@ -1,10 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PaymentItemKind, PaymentStatus, Prisma, UserRole } from '@prisma/client';
+import { Prisma as PrismaNS, PaymentItemKind, PaymentStatus, UserRole } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IPaymentsService, UserCtx } from './payments.service.interface';
 import { IPaymentsRepository } from './payments.repository.interface';
@@ -16,21 +17,25 @@ import { PaymentResponseDto } from './dto/payment-response.dto';
 import { CreatePaymentItemDto } from './dto/create-payment-item.dto';
 import { UpdatePaymentItemDto } from './dto/update-payment-item.dto';
 import { PaymentItemResponseDto } from './dto/payment-item-response.dto';
-import { Prisma as PrismaNS } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService implements IPaymentsService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly repo: IPaymentsRepository,
-    private readonly itemsRepo: IPaymentItemsRepository,
+    private readonly prisma: PrismaService, // injected by type
+    @Inject('IPaymentsRepository')
+    private readonly repo: IPaymentsRepository, // injected by token ✅
+    @Inject('IPaymentItemsRepository')
+    private readonly itemsRepo: IPaymentItemsRepository, // injected by token ✅
   ) {}
 
   private toDto(x: any): PaymentResponseDto { return x as PaymentResponseDto; }
   private toItemDto(x: any): PaymentItemResponseDto { return x as PaymentItemResponseDto; }
 
   private async assertUserRole(userId: number, role: UserRole) {
-    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } });
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
     if (!u || u.role !== role) throw new BadRequestException(`userId must reference a ${role}`);
   }
 
@@ -87,7 +92,7 @@ export class PaymentsService implements IPaymentsService {
       status: dto.status ?? PaymentStatus.pending,
       createdBy: { connect: { id: actor.id } },
       updatedBy: { connect: { id: actor.id } },
-      // code, issuedAt, totalAmount from defaults
+      // code, issuedAt, totalAmount via defaults
     });
 
     return this.toDto(created);
@@ -97,9 +102,10 @@ export class PaymentsService implements IPaymentsService {
     const mr = await this.getMR(medicalRecordId);
     await this.assertPatientScope(currentUser, mr.patientId);
 
-    const where: Prisma.PaymentWhereInput = {
+    const where: PrismaNS.PaymentWhereInput = {
       medicalRecordId,
       patientId: mr.patientId,
+      deletedAt: null, // ignore soft-deleted ✅
       ...(q.status ? { status: q.status } : {}),
       ...(q.method ? { method: q.method } : {}),
       ...(q.search ? { code: { contains: q.search, mode: 'insensitive' } } : {}),
@@ -113,10 +119,16 @@ export class PaymentsService implements IPaymentsService {
         : {}),
     };
 
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 20;
+    const page = Math.max(1, q.page ?? 1);
+    const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+    const order: 'asc' | 'desc' = (q.order ?? 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const { data, total } = await this.repo.findMany({
-      where, page, limit, sortBy: q.sortBy ?? 'issuedAt', order: q.order ?? 'desc',
+      where,
+      page,
+      limit,
+      sortBy: q.sortBy ?? 'issuedAt',
+      order,
     });
 
     return {
@@ -133,16 +145,16 @@ export class PaymentsService implements IPaymentsService {
   }
 
   async update(id: number, actorId: number, dto: UpdatePaymentDto) {
-    const data: Prisma.PaymentUpdateInput = {
+    const data: PrismaNS.PaymentUpdateInput = {
       ...(dto.method !== undefined ? { method: dto.method } : {}),
       updatedBy: { connect: { id: actorId } },
     };
 
     if (dto.status !== undefined) {
       data.status = dto.status;
-      if (dto.status === 'paid') {
+      if (dto.status === PaymentStatus.paid) {
         data.paidAt = new Date();
-      } else if (dto.status === 'pending' || dto.status === 'cancelled') {
+      } else if (dto.status === PaymentStatus.pending || dto.status === PaymentStatus.cancelled) {
         data.paidAt = { set: null };
       }
     }
@@ -159,8 +171,15 @@ export class PaymentsService implements IPaymentsService {
   async listItems(paymentId: number, page: number, limit: number, currentUser: UserCtx) {
     const pay = await this.getPayment(paymentId);
     await this.assertPatientScope(currentUser, pay.patientId);
-    const { data, total } = await this.itemsRepo.findManyForPayment(paymentId, page, limit);
-    return { data: data.map(this.toItemDto), meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } };
+
+    const p = Math.max(1, page ?? 1);
+    const l = Math.min(100, Math.max(1, limit ?? 20));
+
+    const { data, total } = await this.itemsRepo.findManyForPayment(paymentId, p, l);
+    return {
+      data: data.map(this.toItemDto),
+      meta: { page: p, limit: l, total, totalPages: Math.max(1, Math.ceil(total / l)) },
+    };
   }
 
   async addItem(paymentId: number, actor: UserCtx, dto: CreatePaymentItemDto) {
@@ -217,7 +236,6 @@ export class PaymentsService implements IPaymentsService {
       await this.recomputeTotal(paymentId);
       return this.toItemDto(created);
     } catch (e: any) {
-      // P2002: unique constraint (prevent double-charging same line in same payment)
       if (e?.code === 'P2002') throw new ConflictException('This line is already charged in this payment');
       if (e?.code === 'P2003') throw new BadRequestException('Invalid foreign key');
       throw e;
@@ -233,7 +251,7 @@ export class PaymentsService implements IPaymentsService {
   }
 
   async updateItem(id: number, actorId: number, dto: UpdatePaymentItemDto) {
-    const data: Prisma.PaymentItemUpdateInput = {
+    const data: PrismaNS.PaymentItemUpdateInput = {
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.amount !== undefined ? { amount: new PrismaNS.Decimal(dto.amount) } : {}),
     };

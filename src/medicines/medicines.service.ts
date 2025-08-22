@@ -1,5 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma as PrismaNS } from '@prisma/client';   // use one alias for Decimal & types
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IMedicinesService } from './medicines.service.interface';
 import { IMedicinesRepository } from './medicines.repository.interface';
@@ -7,13 +13,12 @@ import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
 import { QueryMedicineDto } from './dto/query-medicine.dto';
 import { MedicineResponseDto } from './dto/medicine-response.dto';
-import { Prisma as PrismaNS } from '@prisma/client';
 
 @Injectable()
 export class MedicinesService implements IMedicinesService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly repo: IMedicinesRepository,
+    private readonly prisma: PrismaService,                                 // ✅ by type
+    @Inject('IMedicinesRepository') private readonly repo: IMedicinesRepository, // ✅ by token
   ) {}
 
   private toDto(x: any): MedicineResponseDto { return x as MedicineResponseDto; }
@@ -41,51 +46,49 @@ export class MedicinesService implements IMedicinesService {
 
   async list(q: QueryMedicineDto) {
     const now = new Date();
-
-    const where: Prisma.MedicineWhereInput = {
-      ...(q.search
-        ? {
-            OR: [
-              { name: { contains: q.search, mode: 'insensitive' } },
-              { dosage: { contains: q.search, mode: 'insensitive' } },
-              { type: { contains: q.search, mode: 'insensitive' } },
-              { manufacturer: { contains: q.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
+    const where: PrismaNS.MedicineWhereInput = {
+      ...(q.search ? {
+        OR: [
+          { name: { contains: q.search, mode: 'insensitive' } },
+          { dosage: { contains: q.search, mode: 'insensitive' } },
+          { type: { contains: q.search, mode: 'insensitive' } },
+          { manufacturer: { contains: q.search, mode: 'insensitive' } },
+        ],
+      } : {}),
       ...(q.type ? { type: { equals: q.type, mode: 'insensitive' } } : {}),
       ...(q.manufacturer ? { manufacturer: { contains: q.manufacturer, mode: 'insensitive' } } : {}),
       ...(q.inStock === true ? { stock: { gt: 0 } } : {}),
-      ...(q.lowStock === true ? { stock: { lte: (q as any).reorderLevel ?? undefined } } : {}), // handled below if we also want reorderLevel filter
+      // lowStock = filter in memory (stock <= reorderLevel)
       ...(q.isExpired === true ? { expiryDate: { lt: now } } : {}),
-      ...(q.expireFrom || q.expireTo
-        ? {
-            expiryDate: {
-              ...(q.expireFrom ? { gte: new Date(q.expireFrom) } : {}),
-              ...(q.expireTo ? { lte: new Date(q.expireTo) } : {}),
-            },
-          }
-        : {}),
+      ...(q.expireFrom || q.expireTo ? {
+        expiryDate: {
+          ...(q.expireFrom ? { gte: new Date(q.expireFrom) } : {}),
+          ...(q.expireTo ? { lte: new Date(q.expireTo) } : {}),
+        },
+      } : {}),
     };
 
-    // lowStock means stock <= reorderLevel; Prisma can't express field-to-field comparison; we’ll filter in memory.
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 20;
+    const page = Math.max(1, q.page ?? 1);
+    const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+
     const { data, total } = await this.repo.findMany({
       where,
       page,
       limit,
-      sortBy: q.sortBy ?? 'name',
-      order: q.order ?? 'asc',
+      sortBy: (q.sortBy ?? 'name') as 'name' | 'price' | 'createdAt', // keep in sync with repo
+      order: (q.order ?? 'asc').toLowerCase() === 'asc' ? 'asc' : 'desc',
     });
 
-    const filtered = q.lowStock
-      ? data.filter((m) => m.stock <= m.reorderLevel)
-      : data;
+    const filtered = q.lowStock ? data.filter(m => m.stock <= m.reorderLevel) : data;
 
     return {
       data: filtered.map(this.toDto),
-      meta: { page, limit, total: q.lowStock ? filtered.length : total, totalPages: Math.max(1, Math.ceil((q.lowStock ? filtered.length : total) / limit)) },
+      meta: {
+        page,
+        limit,
+        total: q.lowStock ? filtered.length : total,
+        totalPages: Math.max(1, Math.ceil((q.lowStock ? filtered.length : total) / limit)),
+      },
     };
   }
 
@@ -97,7 +100,7 @@ export class MedicinesService implements IMedicinesService {
 
   async update(id: number, dto: UpdateMedicineDto) {
     try {
-      const data: Prisma.MedicineUpdateInput = {
+      const data: PrismaNS.MedicineUpdateInput = {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.dosage !== undefined ? { dosage: dto.dosage } : {}),
         ...(dto.type !== undefined ? { type: dto.type } : {}),
@@ -113,7 +116,6 @@ export class MedicinesService implements IMedicinesService {
           : {}),
         ...(dto.price !== undefined ? { price: new PrismaNS.Decimal(dto.price) } : {}),
       };
-
       const updated = await this.repo.update(id, data);
       return this.toDto(updated);
     } catch (e: any) {

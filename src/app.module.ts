@@ -18,9 +18,19 @@ import { MedicalRecordsCollectionModule } from './medical-records/medical-record
 import { RecordsItemsModule } from './records/records.items.module';
 import { AuthModule } from './auth/auth.module';
 import { PatientHubModule } from './patient-hub/patient-hub.module';
+import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
 
 @Module({
   imports: [
+     ConfigModule.forRoot({
+      isGlobal: true,
+      // optional but recommended:
+      validationSchema: Joi.object({
+        JWT_ACCESS_SECRET: Joi.string().min(16).required(),
+        JWT_ACCESS_TTL: Joi.string().default('15m'),
+      }),
+    }),
     ThrottlerModule.forRoot({
       throttlers: [
         {

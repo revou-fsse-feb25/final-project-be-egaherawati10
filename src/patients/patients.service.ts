@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,8 +16,8 @@ import { PatientResponseDto } from './dto/patient-response.dto';
 @Injectable()
 export class PatientsService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly repo: IPatientsRepository,
+    @Inject('IPatientsRepository') private readonly prisma: PrismaService,
+    @Inject('IUsersService') private readonly repo: IPatientsRepository,
   ) {}
 
   private toResponse(x: any): PatientResponseDto {

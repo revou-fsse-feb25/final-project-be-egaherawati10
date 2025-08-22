@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,22 +17,30 @@ import { ServiceResponseDto } from './dto/service-response.dto';
 import { CreateServiceLineDto } from './dto/create-service-line.dto';
 import { UpdateServiceLineDto } from './dto/update-service-line.dto';
 import { ServiceLineResponseDto } from './dto/service-line-response.dto';
-import { Prisma as PrismaNS } from '@prisma/client'; // for Decimal
+import { Prisma as PrismaNS } from '@prisma/client';
+
+type SortField = 'serviceDate' | 'createdAt' | 'updatedAt';
+const ALLOWED_SORT_FIELDS: SortField[] = ['serviceDate', 'createdAt', 'updatedAt'];
 
 @Injectable()
 export class ServicesService implements IServicesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly repo: IServicesRepository,
-    private readonly linesRepo: IServiceLinesRepository,
+    @Inject('IServicesRepository') private readonly repo: IServicesRepository,          // ✅ token
+    @Inject('IServiceLinesRepository') private readonly linesRepo: IServiceLinesRepository, // ✅ token
   ) {}
 
   private toDto(x: any): ServiceResponseDto { return x as ServiceResponseDto; }
   private toLineDto(x: any): ServiceLineResponseDto { return x as ServiceLineResponseDto; }
 
   private async assertUserRole(userId: number, role: UserRole) {
-    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } });
-    if (!u || u.role !== role) throw new BadRequestException(`userId must reference a ${role}`);
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+    if (!u || u.role !== role) {
+      throw new BadRequestException(`userId must reference a ${role}`);
+    }
   }
 
   private async getMR(medicalRecordId: number) {
@@ -67,7 +76,7 @@ export class ServicesService implements IServicesService {
 
     const doctorId = dto.doctorId ?? (actor.role === 'doctor' ? actor.id : undefined);
     if (!doctorId) throw new BadRequestException('doctorId is required');
-    await this.assertUserRole(doctorId, 'doctor');
+    await this.assertUserRole(doctorId, UserRole.doctor); // ✅ enum, not string
 
     const created = await this.repo.create({
       patient: { connect: { id: mr.patientId } },
@@ -89,6 +98,7 @@ export class ServicesService implements IServicesService {
     const where: Prisma.ServiceWhereInput = {
       medicalRecordId,
       patientId: mr.patientId,
+      deletedAt: null, // ✅ ignore soft-deleted
       ...(q.status ? { status: q.status } : {}),
       ...(q.from || q.to
         ? {
@@ -100,15 +110,19 @@ export class ServicesService implements IServicesService {
         : {}),
     };
 
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 20;
+    const page = Math.max(1, q.page ?? 1);
+    const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+    const rawSortBy = (q.sortBy as SortField | undefined) ?? 'serviceDate';
+    const sortBy: SortField = ALLOWED_SORT_FIELDS.includes(rawSortBy) ? rawSortBy : 'serviceDate';
+    const order = (q.order ?? 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const { data, total } = await this.repo.findMany({
-      where, page, limit, sortBy: q.sortBy ?? 'serviceDate', order: q.order ?? 'desc',
+      where, page, limit, sortBy, order,
     });
 
     return {
-      data: data.map(this.toDto),
-      meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      data: data.map((x) => this.toDto(x)),
+      meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)), sortBy, order },
     };
   }
 
@@ -119,9 +133,8 @@ export class ServicesService implements IServicesService {
     return this.toDto(svc);
   }
 
-  // ✅ Revised: serviceDate never set to null, only when provided
   async update(id: number, actorId: number, dto: UpdateServiceDto) {
-    if (dto.doctorId !== undefined) await this.assertUserRole(dto.doctorId, 'doctor');
+    if (dto.doctorId !== undefined) await this.assertUserRole(dto.doctorId, UserRole.doctor); // ✅ enum
 
     const data: Prisma.ServiceUpdateInput = {
       ...(dto.doctorId !== undefined ? { doctor: { connect: { id: dto.doctorId } } } : {}),
@@ -142,8 +155,12 @@ export class ServicesService implements IServicesService {
   async listLines(serviceId: number, page: number, limit: number, currentUser: UserCtx) {
     const svc = await this.getService(serviceId);
     await this.assertPatientScope(currentUser, svc.patientId);
-    const { data, total } = await this.linesRepo.findManyForService(serviceId, page, limit);
-    return { data: data.map(this.toLineDto), meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } };
+
+    const p = Math.max(1, page ?? 1);
+    const l = Math.min(100, Math.max(1, limit ?? 20));
+
+    const { data, total } = await this.linesRepo.findManyForService(serviceId, p, l);
+    return { data: data.map((x) => this.toLineDto(x)), meta: { page: p, limit: l, total, totalPages: Math.max(1, Math.ceil(total / l)) } };
   }
 
   async addLine(serviceId: number, actor: UserCtx, dto: CreateServiceLineDto) {
@@ -170,6 +187,7 @@ export class ServicesService implements IServicesService {
       });
       return this.toLineDto(created);
     } catch (e: any) {
+      // more robust Prisma error mapping
       if (e?.code === 'P2002') throw new ConflictException('Service already contains this service item');
       if (e?.code === 'P2003') throw new BadRequestException('Invalid foreign key');
       throw e;

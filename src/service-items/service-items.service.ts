@@ -1,5 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, Prisma as PrismaNS } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IServiceItemsRepository } from './service-items.repository.interface';
 import { IServiceItemsService } from './service-items.service.interface';
@@ -7,23 +13,24 @@ import { CreateServiceItemDto } from './dto/create-service-item.dto';
 import { UpdateServiceItemDto } from './dto/update-service-item.dto';
 import { QueryServiceItemDto } from './dto/query-service-item.dto';
 import { ServiceItemResponseDto } from './dto/service-item-response.dto';
-import { Prisma as PrismaNS } from '@prisma/client';
 
 @Injectable()
 export class ServiceItemsService implements IServiceItemsService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly repo: IServiceItemsRepository,
+    private readonly prisma: PrismaService, // ✅ inject by type
+    @Inject('IServiceItemsRepository')
+    private readonly repo: IServiceItemsRepository, // ✅ inject by token
   ) {}
 
-  private toDto(x: any): ServiceItemResponseDto { return x as ServiceItemResponseDto; }
+  private toDto(x: any): ServiceItemResponseDto {
+    return x as ServiceItemResponseDto;
+  }
 
   async create(dto: CreateServiceItemDto, actorId: number) {
     try {
       const created = await this.repo.create({
         name: dto.name,
         price: new PrismaNS.Decimal(dto.price),
-        // creator/updater audit optional:
         // createdBy: { connect: { id: actorId } },
         // updatedBy: { connect: { id: actorId } },
       });
@@ -35,22 +42,23 @@ export class ServiceItemsService implements IServiceItemsService {
   }
 
   async list(q: QueryServiceItemDto) {
-    const where: Prisma.ServiceItemWhereInput = {
-      ...(q.search ? { name: { contains: q.search, mode: 'insensitive' } } : {}),
-    };
+    const where: Prisma.ServiceItemWhereInput = q.search
+      ? { name: { contains: q.search, mode: 'insensitive' } }
+      : {};
 
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 20;
-    const { data, total } = await this.repo.findMany({
-      where,
-      page,
-      limit,
-      sortBy: q.sortBy ?? 'name',
-      order: q.order ?? 'asc',
-    });
+    const page = Math.max(1, q.page ?? 1);
+    const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+
+      const { data, total } = await this.repo.findMany({
+        where,
+        page,
+        limit,
+        sortBy: (q.sortBy ?? 'name') as 'name' | 'price' | 'createdAt',
+        order: (q.order ?? 'asc') === 'asc' ? 'asc' : 'desc',
+      });
 
     return {
-      data: data.map(this.toDto),
+      data: data.map((x) => this.toDto(x)),
       meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
     };
   }

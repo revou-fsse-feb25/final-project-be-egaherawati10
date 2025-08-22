@@ -1,22 +1,26 @@
 import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-type AccessPayload = { sub: number; role: string; tv: number; jti: string; typ?: 'access' };
+type AccessPayload = {
+  sub: number;
+  role: string;
+  tv: number;
+  jti: string;
+  typ?: 'access';
+};
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly prisma: PrismaService) {
-    // Ensure the secret is present and typed as a definite string
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  constructor(cfg: ConfigService, private readonly prisma: PrismaService) {
     const secret = process.env.JWT_ACCESS_SECRET;
-    if (!secret) {
-      throw new Error('JWT_ACCESS_SECRET is not set');
-    }
+    if (!secret) throw new Error('JWT_ACCESS_SECRET is not set');
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      secretOrKey: secret,          // <-- definite string, no more TS error
+      secretOrKey: cfg.getOrThrow<string>('JWT_ACCESS_SECRET'),
       ignoreExpiration: false,
     });
   }
@@ -35,7 +39,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (user.status !== 'active') throw new ForbiddenException('Account is not active');
     if (user.tokenVersion !== payload.tv) throw new UnauthorizedException('Session revoked');
 
-    // Attach to req.user
     return { id: user.id, role: user.role, jti: payload.jti };
   }
 }

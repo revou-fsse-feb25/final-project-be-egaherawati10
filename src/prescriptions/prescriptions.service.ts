@@ -1,29 +1,29 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, PrescriptionStatus, UserRole } from '@prisma/client';
+import { Prisma as PrismaNS, PrescriptionStatus, UserRole } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IPrescriptionsService, UserCtx } from './prescriptions.service.interface';
 import { IPrescriptionsRepository } from './prescriptions.repository.interface';
 import { IPrescriptionItemsRepository } from './prescription-items.repository.interface';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
-  import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
+import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
 import { QueryPrescriptionDto } from './dto/query-prescription.dto';
 import { PrescriptionResponseDto } from './dto/prescription-response.dto';
 import { CreatePrescriptionItemDto } from './dto/create-prescription-item.dto';
 import { UpdatePrescriptionItemDto } from './dto/update-prescription-item.dto';
 import { PrescriptionItemResponseDto } from './dto/prescription-item-response.dto';
-import { Prisma as PrismaNS } from '@prisma/client';
 
 @Injectable()
 export class PrescriptionsService implements IPrescriptionsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly repo: IPrescriptionsRepository,
-    private readonly itemsRepo: IPrescriptionItemsRepository,
+    @Inject('IPrescriptionsRepository') private readonly repo: IPrescriptionsRepository,          // ✅ token
+    @Inject('IPrescriptionItemsRepository') private readonly itemsRepo: IPrescriptionItemsRepository, // ✅ token
   ) {}
 
   private toDto(x: any): PrescriptionResponseDto { return x as PrescriptionResponseDto; }
@@ -67,17 +67,16 @@ export class PrescriptionsService implements IPrescriptionsService {
 
     const doctorId = dto.doctorId ?? (actor.role === 'doctor' ? actor.id : undefined);
     if (!doctorId) throw new BadRequestException('doctorId is required');
-    await this.assertUserRole(doctorId, 'doctor');
+    await this.assertUserRole(doctorId, UserRole.doctor); // ✅ enum
 
     const created = await this.repo.create({
       medicalRecord: { connect: { id: medicalRecordId } },
       patient: { connect: { id: mr.patientId } },
       doctor: { connect: { id: doctorId } },
-      status: dto.status ?? 'issued',
+      status: dto.status ?? PrescriptionStatus.issued, // ✅ enum
       notes: dto.notes ?? null,
       createdBy: { connect: { id: actor.id } },
       updatedBy: { connect: { id: actor.id } },
-      // code & dateIssued come from defaults
     });
 
     return this.toDto(created);
@@ -87,32 +86,29 @@ export class PrescriptionsService implements IPrescriptionsService {
     const mr = await this.getMR(medicalRecordId);
     await this.assertPatientScope(currentUser, mr.patientId);
 
-    const where: Prisma.PrescriptionWhereInput = {
+    const where: PrismaNS.PrescriptionWhereInput = {
       medicalRecordId,
       patientId: mr.patientId,
       ...(q.status ? { status: q.status } : {}),
-      ...(q.search
-        ? {
-            OR: [
-              { code: { contains: q.search, mode: 'insensitive' } },
-              { notes: { contains: q.search, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-      ...(q.from || q.to
-        ? {
-            dateIssued: {
-              ...(q.from ? { gte: new Date(q.from) } : {}),
-              ...(q.to ? { lte: new Date(q.to) } : {}),
-            },
-          }
-        : {}),
+      ...(q.search ? {
+        OR: [
+          { code:  { contains: q.search, mode: 'insensitive' } },
+          { notes: { contains: q.search, mode: 'insensitive' } },
+        ],
+      } : {}),
+      ...(q.from || q.to ? {
+        dateIssued: {
+          ...(q.from ? { gte: new Date(q.from) } : {}),
+          ...(q.to   ? { lte: new Date(q.to) }   : {}),
+        },
+      } : {}),
     };
 
-    const page = q.page ?? 1;
-    const limit = q.limit ?? 20;
+    const page = Math.max(1, q.page ?? 1);
+    const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+
     const { data, total } = await this.repo.findMany({
-      where, page, limit, sortBy: q.sortBy ?? 'dateIssued', order: q.order ?? 'desc',
+      where, page, limit, sortBy: q.sortBy ?? 'dateIssued', order: (q.order ?? 'desc') as 'asc' | 'desc',
     });
 
     return {
@@ -129,25 +125,22 @@ export class PrescriptionsService implements IPrescriptionsService {
   }
 
   async update(id: number, actorId: number, dto: UpdatePrescriptionDto) {
-    if (dto.doctorId !== undefined) await this.assertUserRole(dto.doctorId, 'doctor');
-    if (dto.pharmacistId !== undefined) await this.assertUserRole(dto.pharmacistId, 'pharmacist');
+    if (dto.doctorId      !== undefined) await this.assertUserRole(dto.doctorId,      UserRole.doctor);
+    if (dto.pharmacistId  !== undefined) await this.assertUserRole(dto.pharmacistId,  UserRole.pharmacist);
 
-    const updates: Prisma.PrescriptionUpdateInput = {
-      ...(dto.doctorId !== undefined ? { doctor: { connect: { id: dto.doctorId } } } : {}),
-      ...(dto.pharmacistId !== undefined ? { pharmacist: { connect: { id: dto.pharmacistId } } } : {}),
-      ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+    const updates: PrismaNS.PrescriptionUpdateInput = {
+      ...(dto.doctorId      !== undefined ? { doctor:     { connect: { id: dto.doctorId } } } : {}),
+      ...(dto.pharmacistId  !== undefined ? { pharmacist: { connect: { id: dto.pharmacistId } } } : {}),
+      ...(dto.notes         !== undefined ? { notes: dto.notes } : {}),
       updatedBy: { connect: { id: actorId } },
     };
 
-    // status/dateDispensed coupling
+    // status / dateDispensed coupling
     if (dto.status !== undefined) {
       updates.status = dto.status;
-      if (dto.status === 'dispensed') {
-        updates.dateDispensed = dto.dateDispensed
-          ? new Date(dto.dateDispensed)
-          : new Date();
-      } else if (dto.status === 'draft' || dto.status === 'issued' || dto.status === 'cancelled') {
-        // optional: clear dispensed date on non-dispensed statuses
+      if (dto.status === PrescriptionStatus.dispensed) {
+        updates.dateDispensed = dto.dateDispensed ? new Date(dto.dateDispensed) : new Date();
+      } else {
         updates.dateDispensed = { set: null };
       }
     } else if (dto.dateDispensed !== undefined) {
@@ -158,23 +151,24 @@ export class PrescriptionsService implements IPrescriptionsService {
     return this.toDto(updated);
   }
 
-  async delete(id: number) {
-    await this.repo.softDelete(id);
-  }
+  async delete(id: number) { await this.repo.softDelete(id); }
 
   // ---------- items ----------
   async listItems(prescriptionId: number, page: number, limit: number, currentUser: UserCtx) {
     const rx = await this.getPrescription(prescriptionId);
     await this.assertPatientScope(currentUser, rx.patientId);
-    const { data, total } = await this.itemsRepo.findManyForPrescription(prescriptionId, page, limit);
-    return { data: data.map(this.toItemDto), meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } };
+
+    const p = Math.max(1, page ?? 1);
+    const l = Math.min(100, Math.max(1, limit ?? 20));
+
+    const { data, total } = await this.itemsRepo.findManyForPrescription(prescriptionId, p, l);
+    return { data: data.map(this.toItemDto), meta: { page: p, limit: l, total, totalPages: Math.max(1, Math.ceil(total / l)) } };
   }
 
   async addItem(prescriptionId: number, actor: UserCtx, dto: CreatePrescriptionItemDto) {
     const rx = await this.getPrescription(prescriptionId);
     await this.assertPatientScope(actor, rx.patientId);
 
-    // default price from medicine if not provided
     let price = dto.price;
     if (!price) {
       const med = await this.prisma.medicine.findUnique({ where: { id: dto.medicineId }, select: { id: true, price: true } });
@@ -185,7 +179,7 @@ export class PrescriptionsService implements IPrescriptionsService {
     try {
       const created = await this.itemsRepo.create({
         prescription: { connect: { id: prescriptionId } },
-        medicine: { connect: { id: dto.medicineId } },
+        medicine:     { connect: { id: dto.medicineId } },
         dosage: dto.dosage,
         quantity: dto.quantity,
         price: new PrismaNS.Decimal(price),
@@ -208,16 +202,14 @@ export class PrescriptionsService implements IPrescriptionsService {
   }
 
   async updateItem(id: number, actorId: number, dto: UpdatePrescriptionItemDto) {
-    const data: Prisma.PrescriptionItemUpdateInput = {
-      ...(dto.dosage !== undefined ? { dosage: dto.dosage } : {}),
-      ...(dto.quantity !== undefined ? { quantity: dto.quantity } : {}),
-      ...(dto.price !== undefined ? { price: new PrismaNS.Decimal(dto.price) } : {}),
+    const data: PrismaNS.PrescriptionItemUpdateInput = {
+      ...(dto.dosage       !== undefined ? { dosage: dto.dosage } : {}),
+      ...(dto.quantity     !== undefined ? { quantity: dto.quantity } : {}),
+      ...(dto.price        !== undefined ? { price: new PrismaNS.Decimal(dto.price) } : {}),
       ...(dto.instructions !== undefined ? { instructions: dto.instructions } : {}),
     };
     return this.toItemDto(await this.itemsRepo.update(id, data));
   }
 
-  async deleteItem(id: number) {
-    await this.itemsRepo.delete(id);
-  }
+  async deleteItem(id: number) { await this.itemsRepo.delete(id); }
 }
