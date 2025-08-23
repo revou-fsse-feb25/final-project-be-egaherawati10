@@ -12,5 +12,5 @@ export class UpdateServiceDto {
 
   @ApiPropertyOptional()
   @IsOptional() @IsDateString()
-  serviceDate?: string;  // ← non-nullable; only set when provided
+  serviceDate?: string;
 }

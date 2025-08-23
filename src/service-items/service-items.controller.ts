@@ -6,7 +6,7 @@ import { CreateServiceItemDto } from './dto/create-service-item.dto';
 import { UpdateServiceItemDto } from './dto/update-service-item.dto';
 import { QueryServiceItemDto } from './dto/query-service-item.dto';
 import { PaginatedServiceItemResponseDto, ServiceItemResponseDto } from './dto/service-item-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('service-items')
 @ApiBearerAuth()

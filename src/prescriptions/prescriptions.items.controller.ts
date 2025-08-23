@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { PRESCRIPTIONS_SERVICE, IPrescriptionsService } from './prescriptions.service.interface';
 import { PrescriptionResponseDto } from './dto/prescription-response.dto';
 import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('prescriptions')
 @ApiBearerAuth()

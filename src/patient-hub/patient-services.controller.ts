@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseIntPipe, Query, Req } from '@nestjs/common
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { PaginationDto } from './dto/pagination.dto';
 import { PatientHubService } from './patient-hub.service';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('patients.services')
 @ApiBearerAuth()

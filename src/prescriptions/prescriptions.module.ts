@@ -1,6 +1,6 @@
 // src/prescriptions/prescriptions.module.ts
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { PrescriptionsService } from './prescriptions.service';
 import { PrescriptionsRepository } from './prescriptions.repository';
 import { PrescriptionItemsRepository } from './prescription-items.repository';

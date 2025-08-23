@@ -4,11 +4,11 @@ import { Inject } from '@nestjs/common';
 import { RECORDS_SERVICE, IRecordsService } from './records.service.interface';
 import { RecordResponseDto } from './dto/record-response.dto';
 import { UpdateRecordDto } from './dto/update-record.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('records')
 @ApiBearerAuth()
-@Controller() // base from RouterModule: /records
+@Controller() // RouterModule: /records
 export class RecordsItemsController {
   constructor(
     @Inject(RECORDS_SERVICE) private readonly service: IRecordsService,

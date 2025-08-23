@@ -6,7 +6,9 @@ import { MedicalRecordsItemsController } from './medical-records.items.controlle
 import { MEDICAL_RECORDS_SERVICE } from './medical-records.service.interface';
 
 @Module({
-  controllers: [MedicalRecordsItemsController],
+  controllers: [
+    MedicalRecordsItemsController,
+  ],
   providers: [
     PrismaService,
     MedicalRecordsRepository,

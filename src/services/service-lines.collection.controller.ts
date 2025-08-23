@@ -4,10 +4,9 @@ import { Inject } from '@nestjs/common';
 import { SERVICES_SERVICE, IServicesService } from './services.service.interface';
 import { CreateServiceLineDto } from './dto/create-service-line.dto';
 import { ServiceLineResponseDto } from './dto/service-line-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 class PaginationDto {
-  // lightweight local dto to avoid cross-module dep
   page?: number = 1;
   limit?: number = 20;
 }

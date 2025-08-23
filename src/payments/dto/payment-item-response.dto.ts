@@ -6,7 +6,7 @@ export class PaymentItemResponseDto {
   @ApiProperty() paymentId!: number;
   @ApiProperty({ enum: PaymentItemKind }) kind!: PaymentItemKind;
   @ApiProperty() description!: string;
-  @ApiProperty({ example: '10.00' }) amount!: any; // Prisma.Decimal serialized
+  @ApiProperty({ example: '10.00' }) amount!: any;
   @ApiProperty({ nullable: true }) prescriptionItemId!: number | null;
   @ApiProperty({ nullable: true }) serviceOnServiceItemId!: number | null;
 }

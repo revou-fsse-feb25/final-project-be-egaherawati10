@@ -1,12 +1,11 @@
 import {
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, Prisma as PrismaNS } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { IServiceItemsRepository } from './service-items.repository.interface';
 import { IServiceItemsService } from './service-items.service.interface';
 import { CreateServiceItemDto } from './dto/create-service-item.dto';
@@ -18,8 +17,8 @@ import { ServiceItemResponseDto } from './dto/service-item-response.dto';
 export class ServiceItemsService implements IServiceItemsService {
   constructor(
     @Inject('IServiceItemsRepository')
-    private readonly repo: IServiceItemsRepository, // ✅ inject by token
-    private readonly prisma: PrismaService, // ✅ inject by type
+    private readonly repo: IServiceItemsRepository,
+    private readonly prisma: PrismaService, 
   ) {}
 
   private toDto(x: any): ServiceItemResponseDto {

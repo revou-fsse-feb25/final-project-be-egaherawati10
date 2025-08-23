@@ -5,7 +5,7 @@ import { IsIn, IsOptional, IsPositive } from 'class-validator';
 export class QueryServiceItemDto {
   @ApiPropertyOptional()
   @IsOptional()
-  search?: string; // matches name
+  search?: string;
 
   @ApiPropertyOptional({ default: 1 })
   @Transform(({ value }) => Number(value))

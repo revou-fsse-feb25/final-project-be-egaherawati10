@@ -1,15 +1,14 @@
 import { Body, Controller, Get, Inject, Param, ParseIntPipe, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { MedicalRecordsService } from './medical-records.service';
 import { QueryMedicalRecordDto } from './dto/query-medical-record.dto';
 import { CreateMedicalRecordForPatientDto } from './dto/create-medical-record.dto';
 import { MedicalRecordResponseDto, PaginatedMedicalRecordResponseDto } from './dto/medical-record-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 import { IMedicalRecordsService, MEDICAL_RECORDS_SERVICE } from './medical-records.service.interface';
 
 @ApiTags('patients.medical-records')
 @ApiBearerAuth()
-@Controller() // base path is provided by RouterModule: /patients/:patientId/medical-records
+@Controller() //RouterModule: /patients/:patientId/medical-records
 export class MedicalRecordsCollectionController {
   constructor(
     @Inject(MEDICAL_RECORDS_SERVICE)

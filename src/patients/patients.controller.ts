@@ -23,7 +23,7 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { QueryPatientDto } from './dto/query-patient.dto';
 import { PatientResponseDto, PaginatedPatientResponseDto } from './dto/patient-response.dto';
 import { PatientsService } from './patients.service';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('patients')
 @ApiBearerAuth()

@@ -1,5 +1,3 @@
-// src/common/auth/capabilities.ts
-
 export type Role =
   | 'admin'
   | 'doctor'

@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Record as RecordModel } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 import { IRecordsService, UserCtx } from './records.service.interface';
 import { IRecordsRepository } from './records.repository.interface';
 import { CreateRecordDto } from './dto/create-record.dto';
@@ -19,16 +19,15 @@ const ALLOWED_SORT_FIELDS: SortField[] = ['createdAt', 'updatedAt'];
 @Injectable()
 export class RecordsService implements IRecordsService {
   constructor(
-    private readonly prisma: PrismaService, // index [0]
-    @Inject('IRecordsRepository')           // ✅ inject by token
-    private readonly repo: IRecordsRepository, // index [1]
+    private readonly prisma: PrismaService,
+    @Inject('IRecordsRepository') 
+    private readonly repo: IRecordsRepository,
   ) {}
 
   private toDto(x: any): RecordResponseDto {
     return x as RecordResponseDto;
   }
 
-  /** Ensure MR exists (not deleted), return its patientId */
   private async getMRPatientId(medicalRecordId: number): Promise<number> {
     const mr = await this.prisma.medicalRecord.findFirst({
       where: { id: medicalRecordId, deletedAt: null },
@@ -38,7 +37,6 @@ export class RecordsService implements IRecordsService {
     return mr.patientId;
   }
 
-  /** For patient role, ensure they own the patient profile */
   private async assertPatientScope(user: UserCtx, patientId: number) {
     if (user.role !== 'patient') return;
     const me = await this.prisma.patientProfile.findFirst({

@@ -11,7 +11,7 @@ export class MedicineResponseDto {
   @ApiProperty() unit!: string;
   @ApiProperty({ nullable: true }) batchNo!: string | null;
   @ApiProperty({ nullable: true }) expiryDate!: Date | null;
-  @ApiProperty({ example: '12.50' }) price!: any; // Prisma.Decimal serialized
+  @ApiProperty({ example: '12.50' }) price!: any;
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
 }

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { MedicalRecordsRepository } from './medical-records.repository';
 import { MedicalRecordsService } from './medical-records.service';
 import { MedicalRecordsCollectionController } from './medical-records.collection.controller';

@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { PRESCRIPTIONS_SERVICE, IPrescriptionsService } from './prescriptions.service.interface';
 import { CreatePrescriptionItemDto } from './dto/create-prescription-item.dto';
 import { PrescriptionItemResponseDto } from './dto/prescription-item-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 class PaginationDto { page?: number = 1; limit?: number = 20; }
 

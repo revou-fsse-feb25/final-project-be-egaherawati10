@@ -1,20 +1,21 @@
-// src/medicines/medicines.module.ts
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/prisma/prisma.module';
-import { MedicinesController } from './medicines.controller';
+import { PrismaModule } from '../prisma/prisma.module';
 import { MedicinesService } from './medicines.service';
 import { MedicinesRepository } from './medicines.repository';
+import { MedicinesController } from './medicines.controller';
 import { MEDICINES_SERVICE } from './medicines.service.interface';
 
 @Module({
   imports: [PrismaModule],
   controllers: [MedicinesController],
   providers: [
-    MedicinesRepository,
     MedicinesService,
-    { provide: 'IMedicinesRepository', useExisting: MedicinesRepository },
+    MedicinesRepository,
+    { provide: 'IMedicinesRepository', useClass: MedicinesRepository },
     { provide: MEDICINES_SERVICE, useExisting: MedicinesService },
   ],
-  exports: [MEDICINES_SERVICE],
+  exports: [
+    'IMedicinesRepository', MEDICINES_SERVICE,
+  ],
 })
 export class MedicinesModule {}

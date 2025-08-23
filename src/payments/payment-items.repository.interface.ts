@@ -5,5 +5,5 @@ export interface IPaymentItemsRepository {
   findById(id: number): Promise<any | null>;
   findManyForPayment(paymentId: number, page: number, limit: number): Promise<{ data: any[]; total: number }>;
   update(id: number, data: Prisma.PaymentItemUpdateInput): Promise<any>;
-  delete(id: number): Promise<void>; // hard delete
+  delete(id: number): Promise<void>;
 }

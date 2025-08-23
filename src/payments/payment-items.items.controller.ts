@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { PAYMENTS_SERVICE, IPaymentsService } from './payments.service.interface';
 import { PaymentItemResponseDto } from './dto/payment-item-response.dto';
 import { UpdatePaymentItemDto } from './dto/update-payment-item.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('payment-items')
 @ApiBearerAuth()

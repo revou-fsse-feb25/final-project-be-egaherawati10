@@ -2,7 +2,8 @@ import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { PatientsService } from './patients.service';
 import { PatientsRepository } from './patients.repository';
-import { UsersModule } from 'src/users/users.module';
+import { UsersModule } from '../users/users.module';
+import { PatientsController } from './patients.controller';
 
 @Module({
   imports: [
@@ -12,10 +13,10 @@ import { UsersModule } from 'src/users/users.module';
   providers: [
     PatientsRepository,
     PatientsService,
-    { provide: 'IPatientsRepository', useExisting: PatientsRepository }, // ⬅️ bind token
-    { provide: 'IPatientsService', useExisting: PatientsService },       // optional export token
+    { provide: 'IPatientsRepository', useExisting: PatientsRepository },
+    { provide: 'IPatientsService', useExisting: PatientsService },
   ],
-  exports: ['IPatientsService'], // optional: if other modules need it
-  controllers: [/* PatientsController */],
+  exports: ['IPatientsService'],
+  controllers: [PatientsController],
 })
 export class PatientsModule {}

@@ -26,11 +26,9 @@ export class UpdateMedicineDto {
   @ApiPropertyOptional() @IsOptional() @IsString()
   batchNo?: string | null;
 
-  /** Allow clearing expiry by passing null */
   @ApiPropertyOptional() @IsOptional()
   expiryDate?: string | null;
 
-  /** Decimal as string */
   @ApiPropertyOptional() @IsOptional() @IsString()
   price?: string;
 }

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma as PrismaNS, PaymentItemKind, PaymentStatus, UserRole } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { IPaymentsService, UserCtx } from './payments.service.interface';
 import { IPaymentsRepository } from './payments.repository.interface';
 import { IPaymentItemsRepository } from './payment-items.repository.interface';

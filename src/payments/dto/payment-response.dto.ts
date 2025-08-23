@@ -10,7 +10,7 @@ export class PaymentResponseDto {
   @ApiProperty({ enum: PaymentMethod }) method!: PaymentMethod;
   @ApiProperty() issuedAt!: Date;
   @ApiProperty({ nullable: true }) paidAt!: Date | null;
-  @ApiProperty({ example: '0.00' }) totalAmount!: any; // Prisma.Decimal serialized
+  @ApiProperty({ example: '0.00' }) totalAmount!: any;
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
 }

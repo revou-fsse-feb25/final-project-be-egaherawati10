@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { IServicesService, UserCtx } from './services.service.interface';
 import { IServicesRepository } from './services.repository.interface';
 import { IServiceLinesRepository } from './service-lines.repository.interface';

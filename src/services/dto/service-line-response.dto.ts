@@ -5,5 +5,5 @@ export class ServiceLineResponseDto {
   @ApiProperty() serviceId!: number;
   @ApiProperty() serviceItemId!: number;
   @ApiProperty() quantity!: number;
-  @ApiProperty() unitPrice!: any; // Prisma.Decimal serialized by Nest
+  @ApiProperty() unitPrice!: any;
 }

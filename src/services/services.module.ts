@@ -1,6 +1,6 @@
 // src/services/services.module.ts  (or services.collection.module.ts if that’s where the controller is)
 import { Module } from '@nestjs/common';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { ServicesCollectionController } from './services.collection.controller';
 import { ServicesService } from './services.service';
 import { ServicesRepository } from './services.repository';

@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { PAYMENTS_SERVICE, IPaymentsService } from './payments.service.interface';
 import { CreatePaymentItemDto } from './dto/create-payment-item.dto';
 import { PaymentItemResponseDto } from './dto/payment-item-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 class PaginationDto { page?: number = 1; limit?: number = 20; }
 

@@ -3,6 +3,8 @@ import { UpdateRecordDto } from './dto/update-record.dto';
 import { QueryRecordDto } from './dto/query-record.dto';
 import { RecordResponseDto } from './dto/record-response.dto';
 
+export const RECORDS_SERVICE = Symbol('RECORDS_SERVICE');
+
 export type UserCtx = { id: number; role: string };
 
 export interface IRecordsService {
@@ -12,5 +14,3 @@ export interface IRecordsService {
   update(id: number, actorId: number, dto: UpdateRecordDto): Promise<RecordResponseDto>;
   delete(id: number): Promise<void>;
 }
-
-export const RECORDS_SERVICE = Symbol('RECORDS_SERVICE');

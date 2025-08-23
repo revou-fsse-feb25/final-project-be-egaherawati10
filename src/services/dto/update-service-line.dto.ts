@@ -6,5 +6,5 @@ export class UpdateServiceLineDto {
   quantity?: number;
 
   @ApiPropertyOptional() @IsOptional()
-  unitPrice?: string; // Decimal as string
+  unitPrice?: string;
 }

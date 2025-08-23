@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 
+export const RECORDS_REPOSITORY = Symbol('RECORDS_REPOSITORY');
 export interface IRecordsRepository {
   create(data: Prisma.RecordCreateInput): Promise<any>;
   findById(id: number): Promise<any | null>;

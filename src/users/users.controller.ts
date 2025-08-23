@@ -5,7 +5,7 @@ import { IUsersService } from './users.service.interface';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 export const USERS_SERVICE = 'IUsersService' as const; // optional: centralize token
 

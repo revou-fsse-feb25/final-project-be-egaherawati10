@@ -24,7 +24,6 @@ export class QueryMedicineDto {
   @Transform(({ value }) => value === 'true') @IsOptional() @IsBoolean()
   isExpired?: boolean;
 
-  /** ISO range filter on expiryDate */
   @ApiPropertyOptional() @IsOptional() @IsString()
   expireFrom?: string;
 

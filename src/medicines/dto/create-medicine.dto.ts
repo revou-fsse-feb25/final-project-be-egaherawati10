@@ -26,7 +26,7 @@ export class CreateMedicineDto {
   @ApiPropertyOptional() @IsOptional() @IsString()
   batchNo?: string;
 
-  /** ISO string, optional */
+  /** ISO string */
   @ApiPropertyOptional() @IsOptional() @IsString()
   expiryDate?: string;
 

@@ -8,7 +8,6 @@ export class CreateServiceLineDto {
   @ApiProperty() @IsInt() @IsPositive()
   quantity!: number;
 
-  /** Defaults to ServiceItem.price if omitted */
   @ApiPropertyOptional() @IsOptional()
-  unitPrice?: string; // Decimal as string
+  unitPrice?: string;
 }

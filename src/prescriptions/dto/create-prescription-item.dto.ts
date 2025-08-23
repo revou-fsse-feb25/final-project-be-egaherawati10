@@ -11,7 +11,6 @@ export class CreatePrescriptionItemDto {
   @ApiProperty() @IsInt() @IsPositive()
   quantity!: number;
 
-  /** Decimal as string; defaults from medicine.price if omitted */
   @ApiPropertyOptional() @IsOptional()
   price?: string;
 

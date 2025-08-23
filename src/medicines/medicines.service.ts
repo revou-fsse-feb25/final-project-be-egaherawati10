@@ -5,23 +5,46 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma as PrismaNS } from '@prisma/client';   // use one alias for Decimal & types
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma as PrismaNS } from '@prisma/client';
 import { IMedicinesService } from './medicines.service.interface';
-import { IMedicinesRepository } from './medicines.repository.interface';
+import {
+  IMedicinesRepository,
+  MedicineSortField,
+} from './medicines.repository.interface';
 import { CreateMedicineDto } from './dto/create-medicine.dto';
 import { UpdateMedicineDto } from './dto/update-medicine.dto';
 import { QueryMedicineDto } from './dto/query-medicine.dto';
 import { MedicineResponseDto } from './dto/medicine-response.dto';
 
+const ALLOWED_SORT = new Set<MedicineSortField>(['name', 'price', 'createdAt']);
+
 @Injectable()
 export class MedicinesService implements IMedicinesService {
   constructor(
-    private readonly prisma: PrismaService,                                 // ✅ by type
-    @Inject('IMedicinesRepository') private readonly repo: IMedicinesRepository, // ✅ by token
+    @Inject('IMedicinesRepository') private readonly repo: IMedicinesRepository,
   ) {}
 
-  private toDto(x: any): MedicineResponseDto { return x as MedicineResponseDto; }
+  private toDto(x: any): MedicineResponseDto {
+    return x as MedicineResponseDto;
+  }
+
+  private parseDateOrThrow(value: string, field: string): Date {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) throw new BadRequestException(`${field} must be a valid ISO date`);
+    return d;
+  }
+
+  private toDecimal(v: string | number): PrismaNS.Decimal {
+    return new PrismaNS.Decimal(typeof v === 'number' ? v.toString() : v);
+  }
+
+  private mapPrismaError(e: unknown): never {
+    if (e instanceof PrismaNS.PrismaClientKnownRequestError) {
+      if (e.code === 'P2002') throw new ConflictException('Combination of name + dosage must be unique');
+      if (e.code === 'P2025') throw new NotFoundException('Medicine not found');
+    }
+    throw e;
+  }
 
   async create(dto: CreateMedicineDto) {
     try {
@@ -34,60 +57,62 @@ export class MedicinesService implements IMedicinesService {
         reorderLevel: dto.reorderLevel ?? 0,
         unit: dto.unit ?? 'unit',
         batchNo: dto.batchNo ?? null,
-        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : null,
-        price: new PrismaNS.Decimal(dto.price),
+        expiryDate: dto.expiryDate ? this.parseDateOrThrow(dto.expiryDate, 'expiryDate') : null,
+        price: this.toDecimal(dto.price),
       });
       return this.toDto(created);
-    } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('Combination of name + dosage must be unique');
-      throw e;
+    } catch (e) {
+      this.mapPrismaError(e);
     }
   }
 
   async list(q: QueryMedicineDto) {
     const now = new Date();
     const where: PrismaNS.MedicineWhereInput = {
-      ...(q.search ? {
-        OR: [
-          { name: { contains: q.search, mode: 'insensitive' } },
-          { dosage: { contains: q.search, mode: 'insensitive' } },
-          { type: { contains: q.search, mode: 'insensitive' } },
-          { manufacturer: { contains: q.search, mode: 'insensitive' } },
-        ],
-      } : {}),
+      ...(q.search
+        ? {
+            OR: [
+              { name: { contains: q.search, mode: 'insensitive' } },
+              { dosage: { contains: q.search, mode: 'insensitive' } },
+              { type: { contains: q.search, mode: 'insensitive' } },
+              { manufacturer: { contains: q.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
       ...(q.type ? { type: { equals: q.type, mode: 'insensitive' } } : {}),
       ...(q.manufacturer ? { manufacturer: { contains: q.manufacturer, mode: 'insensitive' } } : {}),
       ...(q.inStock === true ? { stock: { gt: 0 } } : {}),
-      // lowStock = filter in memory (stock <= reorderLevel)
       ...(q.isExpired === true ? { expiryDate: { lt: now } } : {}),
-      ...(q.expireFrom || q.expireTo ? {
-        expiryDate: {
-          ...(q.expireFrom ? { gte: new Date(q.expireFrom) } : {}),
-          ...(q.expireTo ? { lte: new Date(q.expireTo) } : {}),
-        },
-      } : {}),
+      ...(q.expireFrom || q.expireTo
+        ? {
+            expiryDate: {
+              ...(q.expireFrom ? { gte: this.parseDateOrThrow(q.expireFrom, 'expireFrom') } : {}),
+              ...(q.expireTo ? { lte: this.parseDateOrThrow(q.expireTo, 'expireTo') } : {}),
+            },
+          }
+        : {}),
     };
 
     const page = Math.max(1, q.page ?? 1);
     const limit = Math.min(100, Math.max(1, q.limit ?? 20));
+    const sortBy = (ALLOWED_SORT.has(q.sortBy as any) ? (q.sortBy as MedicineSortField) : 'name');
+    const order = (q.order ?? 'asc').toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-    const { data, total } = await this.repo.findMany({
-      where,
-      page,
-      limit,
-      sortBy: (q.sortBy ?? 'name') as 'name' | 'price' | 'createdAt', // keep in sync with repo
-      order: (q.order ?? 'asc').toLowerCase() === 'asc' ? 'asc' : 'desc',
-    });
+    const { data, total } = await this.repo.findMany({ where, page, limit, sortBy, order });
 
-    const filtered = q.lowStock ? data.filter(m => m.stock <= m.reorderLevel) : data;
+    // NOTE: lowStock is a post-filter (Prisma can't compare two columns in where)
+    const filtered = q.lowStock ? data.filter((m) => m.stock <= m.reorderLevel) : data;
+    const effectiveTotal = q.lowStock ? filtered.length : total;
 
     return {
-      data: filtered.map(this.toDto),
+      data: filtered.map((m) => this.toDto(m)),
       meta: {
         page,
         limit,
-        total: q.lowStock ? filtered.length : total,
-        totalPages: Math.max(1, Math.ceil((q.lowStock ? filtered.length : total) / limit)),
+        total: effectiveTotal,
+        totalPages: Math.max(1, Math.ceil(effectiveTotal / limit)),
+        sortBy,
+        order,
       },
     };
   }
@@ -112,25 +137,28 @@ export class MedicinesService implements IMedicinesService {
         ...(dto.expiryDate !== undefined
           ? dto.expiryDate === null
             ? { expiryDate: { set: null } }
-            : { expiryDate: new Date(dto.expiryDate) }
+            : { expiryDate: this.parseDateOrThrow(dto.expiryDate, 'expiryDate') }
           : {}),
-        ...(dto.price !== undefined ? { price: new PrismaNS.Decimal(dto.price) } : {}),
+        ...(dto.price !== undefined ? { price: this.toDecimal(dto.price) } : {}),
       };
+
       const updated = await this.repo.update(id, data);
+      if (!updated) throw new NotFoundException('Medicine not found');
       return this.toDto(updated);
-    } catch (e: any) {
-      if (e?.code === 'P2002') throw new ConflictException('Combination of name + dosage must be unique');
-      throw e;
+    } catch (e) {
+      this.mapPrismaError(e);
     }
   }
 
   async delete(id: number) {
-    await this.repo.softDelete(id);
+    const ok = await this.repo.softDelete(id);          // ← boolean from repo
+    if (!ok) throw new NotFoundException('Medicine not found');
   }
 
   async adjustStock(id: number, delta: number) {
     if (!Number.isInteger(delta)) throw new BadRequestException('delta must be an integer');
     const updated = await this.repo.adjustStock(id, delta);
+    if (!updated) throw new NotFoundException('Medicine not found');
     return this.toDto(updated);
   }
 }

@@ -6,6 +6,6 @@ export class PrescriptionItemResponseDto {
   @ApiProperty() medicineId!: number;
   @ApiProperty() dosage!: string;
   @ApiProperty() quantity!: number;
-  @ApiProperty() price!: any; // Prisma.Decimal serialized
+  @ApiProperty() price!: any;
   @ApiProperty({ nullable: true }) instructions!: string | null;
 }

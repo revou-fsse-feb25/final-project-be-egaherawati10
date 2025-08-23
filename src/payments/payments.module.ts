@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-
+import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentItemsRepository } from './payment-items.repository';
 import { PaymentsService } from './payments.service';

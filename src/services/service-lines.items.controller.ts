@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { SERVICES_SERVICE, IServicesService } from './services.service.interface';
 import { ServiceLineResponseDto } from './dto/service-line-response.dto';
 import { UpdateServiceLineDto } from './dto/update-service-line.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('service-lines')
 @ApiBearerAuth()

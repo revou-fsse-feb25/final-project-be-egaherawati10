@@ -1,4 +1,3 @@
-// users.repository.interface.ts
 import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 
 export type SafeUser = Omit<User, 'password' | 'tokenVersion'>;

@@ -1,8 +1,7 @@
-// src/auth/auth.controller.ts
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
-import { Public } from 'src/common/auth/public.decorator';
+import { Public } from '../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 
@@ -29,7 +28,6 @@ export class AuthController {
     return this.authService.login(req.user);
   }
 
-  // Protected by APP_GUARD (JwtAuthGuard first, then PolicyGuard)
   @Post('logout')
   @HttpCode(200)
   @ApiBearerAuth()
@@ -38,7 +36,6 @@ export class AuthController {
     return this.authService.logout(req.user.id);
   }
 
-  // Protected by APP_GUARD
   @Get('profile')
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Current user profile' })

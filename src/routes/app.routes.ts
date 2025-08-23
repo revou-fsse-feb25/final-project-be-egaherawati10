@@ -1,24 +1,24 @@
 import { Routes } from '@nestjs/core';
 
 // Patients
-import { PatientsModule } from 'src/patients/patients.module';
-import { PatientHubModule } from 'src/patient-hub/patient-hub.module';
+import { PatientsModule } from '../patients/patients.module';
+import { PatientHubModule } from '../patient-hub/patient-hub.module';
 
 // Medical Records split: collection (nested under patient) vs canonical items
-import { MedicalRecordsCollectionModule } from 'src/medical-records/medical-records.collection.module';
-import { MedicalRecordsItemsModule } from 'src/medical-records/medical-records.items.module';
+import { MedicalRecordsCollectionModule } from '../medical-records/medical-records.collection.module';
+import { MedicalRecordsItemsModule } from '../medical-records/medical-records.items.module';
 
 // Clinical workflows mounted both nested (under MR) and canonical
-import { ServicesModule } from 'src/services/services.module';
-import { PrescriptionsModule } from 'src/prescriptions/prescriptions.module';
-import { PaymentsModule } from 'src/payments/payments.module';
+import { ServicesModule } from '../services/services.module';
+import { PrescriptionsModule } from '../prescriptions/prescriptions.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 // Catalogs / master data
-import { ServiceItemsModule } from 'src/service-items/service-items.module';
-import { MedicinesModule } from 'src/medicines/medicines.module';
+import { ServiceItemsModule } from '../service-items/service-items.module';
+import { MedicinesModule } from '../medicines/medicines.module';
 
 // Users (admin)
-import { UsersModule } from 'src/users/users.module';
+import { UsersModule } from '../users/users.module';
 
 export const appRoutes: Routes = [
   // /patients and nested

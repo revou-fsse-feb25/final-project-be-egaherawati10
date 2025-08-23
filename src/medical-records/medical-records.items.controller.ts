@@ -1,6 +1,5 @@
 import { Body, Controller, Delete, Get, Inject, Param, ParseIntPipe, Patch, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { MedicalRecordsService } from './medical-records.service';
 import { MedicalRecordResponseDto } from './dto/medical-record-response.dto';
 import { UpdateMedicalRecordDto } from './dto/update-medical-record.dto';
 import { Can } from 'src/common/guards/can.decorator';

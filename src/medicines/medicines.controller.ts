@@ -7,7 +7,7 @@ import { UpdateMedicineDto } from './dto/update-medicine.dto';
 import { QueryMedicineDto } from './dto/query-medicine.dto';
 import { PaginatedMedicineResponseDto, MedicineResponseDto } from './dto/medicine-response.dto';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medicines')
 @ApiBearerAuth()

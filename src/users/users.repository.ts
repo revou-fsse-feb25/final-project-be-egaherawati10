@@ -3,13 +3,10 @@ import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IUsersRepository } from './users.repository.interface';
 
-// Fields allowed for sorting (matches columns we actually expose/use)
 type SortField = 'createdAt' | 'updatedAt' | 'name' | 'username' | 'email';
 
-// What we return from repo for user reads
 type SafeUser = Omit<User, 'password' | 'tokenVersion'>;
 
-// Ensure the select is exactly a Prisma.UserSelect
 const safeSelect = {
   id: true,
   name: true,
@@ -86,7 +83,6 @@ export class UsersRepository implements IUsersRepository {
       return updated as SafeUser;
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
-        // no rows matched
         throw new NotFoundException('User not found');
       }
       throw e;

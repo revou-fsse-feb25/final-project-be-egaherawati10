@@ -5,7 +5,7 @@ import { PAYMENTS_SERVICE, IPaymentsService } from './payments.service.interface
 import { QueryPaymentDto } from './dto/query-payment.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaginatedPaymentResponseDto, PaymentResponseDto } from './dto/payment-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medical-records.payments')
 @ApiBearerAuth()

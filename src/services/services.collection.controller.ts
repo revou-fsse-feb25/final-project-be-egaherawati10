@@ -5,7 +5,7 @@ import { SERVICES_SERVICE, IServicesService } from './services.service.interface
 import { QueryServiceDto } from './dto/query-service.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { PaginatedServiceResponseDto, ServiceResponseDto } from './dto/service-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medical-records.services')
 @ApiBearerAuth()

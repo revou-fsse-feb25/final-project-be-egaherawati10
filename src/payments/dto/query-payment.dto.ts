@@ -6,7 +6,7 @@ import { IsEnum, IsOptional, IsPositive } from 'class-validator';
 export class QueryPaymentDto {
   @ApiPropertyOptional()
   @IsOptional()
-  search?: string; // by code
+  search?: string;
 
   @ApiPropertyOptional({ enum: PaymentStatus })
   @IsOptional()

@@ -5,7 +5,6 @@ export class UpdatePaymentItemDto {
   @ApiPropertyOptional() @IsOptional() @IsString()
   description?: string;
 
-  /** Decimal as string */
   @ApiPropertyOptional() @IsOptional() @IsString()
   amount?: string;
 }

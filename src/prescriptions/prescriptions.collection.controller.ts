@@ -5,7 +5,7 @@ import { PRESCRIPTIONS_SERVICE, IPrescriptionsService } from './prescriptions.se
 import { QueryPrescriptionDto } from './dto/query-prescription.dto';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { PaginatedPrescriptionResponseDto, PrescriptionResponseDto } from './dto/prescription-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medical-records.prescriptions')
 @ApiBearerAuth()

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma as PrismaNS, PrescriptionStatus, UserRole } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { IPrescriptionsService, UserCtx } from './prescriptions.service.interface';
 import { IPrescriptionsRepository } from './prescriptions.repository.interface';
 import { IPrescriptionItemsRepository } from './prescription-items.repository.interface';

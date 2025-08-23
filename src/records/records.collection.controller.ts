@@ -1,18 +1,47 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Inject } from '@nestjs/common';
 import { RECORDS_SERVICE, IRecordsService } from './records.service.interface';
 import { CreateRecordDto } from './dto/create-record.dto';
 import { QueryRecordDto } from './dto/query-record.dto';
-import { PaginatedRecordResponseDto, RecordResponseDto } from './dto/record-response.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import {
+  PaginatedRecordResponseDto,
+  RecordResponseDto,
+} from './dto/record-response.dto';
+import { Can } from '../common/guards/can.decorator';
+
+type RequestUser = { id: number; role: string };
+
+function getUser(req: any): RequestUser {
+  const u = req?.user;
+  if (!u?.id || !u?.role) throw new UnauthorizedException('Not authenticated');
+  return { id: u.id, role: u.role };
+}
 
 @ApiTags('medical-records.records')
 @ApiBearerAuth()
-@Controller() // base from RouterModule: /medical-records/:medicalRecordId/records
+@ApiParam({ name: 'medicalRecordId', type: Number, required: true })
+@Controller('medical-records/:medicalRecordId/records')
 export class RecordsCollectionController {
   constructor(
-    @Inject(RECORDS_SERVICE) private readonly service: IRecordsService,
+    @Inject(RECORDS_SERVICE)
+    private readonly service: IRecordsService,
   ) {}
 
   @Get()
@@ -23,7 +52,8 @@ export class RecordsCollectionController {
     @Query() q: QueryRecordDto,
     @Req() req: any,
   ) {
-    return this.service.listForMedicalRecord(medicalRecordId, q, { id: req.user.id, role: req.user.role });
+    const user = getUser(req);
+    return this.service.listForMedicalRecord(medicalRecordId, q, user);
   }
 
   @Post()
@@ -34,6 +64,7 @@ export class RecordsCollectionController {
     @Body() dto: CreateRecordDto,
     @Req() req: any,
   ) {
-    return this.service.createForMedicalRecord(medicalRecordId, { id: req.user.id, role: req.user.role }, dto);
+    const user = getUser(req);
+    return this.service.createForMedicalRecord(medicalRecordId, user, dto);
   }
 }

@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { SERVICES_SERVICE, IServicesService } from './services.service.interface';
 import { ServiceResponseDto } from './dto/service-response.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
-import { Can } from 'src/common/guards/can.decorator';
+import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('services')
 @ApiBearerAuth()

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { IMedicalRecordsRepository } from './medical-records.repository.interface';
 
 const userMin = { id: true, name: true, username: true, email: true };
