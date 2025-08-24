@@ -6,6 +6,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
+import { LocalStrategy } from './local.strategy';
 
 @Global()
 @Module({
@@ -20,7 +21,7 @@ import { AuthController } from './auth.controller';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy],
   exports: [AuthService, PassportModule, JwtModule],
   controllers: [AuthController],
 })

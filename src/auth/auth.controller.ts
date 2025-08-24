@@ -1,9 +1,10 @@
 import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiConflictResponse, ApiCreatedResponse, ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConflictResponse, ApiCreatedResponse, ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { Public } from '../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -12,6 +13,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @ApiBody({ type: RegisterDto })
   @ApiCreatedResponse({ description: 'Registration successful' })
   @ApiConflictResponse({ description: 'Username or email already exists' })
   register(@Body() dto: RegisterDto) {
@@ -20,6 +22,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @ApiBody({ type: LoginDto })
   @UseGuards(AuthGuard('local'))
   @HttpCode(200)
   @ApiOkResponse({ description: 'Returns access token' })

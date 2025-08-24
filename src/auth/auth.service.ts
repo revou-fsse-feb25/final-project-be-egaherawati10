@@ -92,23 +92,16 @@ export class AuthService {
     }
   }
 
-  async validateUser(usernameOrEmail: string, password: string): Promise<SafeUser | null> {
-    const key = usernameOrEmail.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: { OR: [{ username: key }, { email: key }] },
-    });
-    if (!user) return null;
-
+  async validateUser(username: string, password: string): Promise<SafeUser | null> {
+    const key = username.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { username: key } });
+  if (!user) return null;
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return null;
-
-    if (user.status !== UserStatus.active) {
-      throw new UnauthorizedException('Account is suspended');
-    }
-
-    const { password: _pw, ...safe } = user as any;
-    return safe as SafeUser;
-  }
+  if (!ok) return null;
+  if (user.status !== UserStatus.active) throw new  UnauthorizedException('Account is suspended');
+  const { password: _pw, ...safe } = user as any;
+  return safe as SafeUser;
+}
 
   /** Called by AuthController after Local guard sets req.user */
   async login(user: SafeUser) {

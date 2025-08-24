@@ -14,15 +14,16 @@ export class PolicyGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const req = ctx.switchToHttp().getRequest();
-    const user = req.user as { id: number; role: Role } | undefined;
     const meta = this.reflector.get<{ resource: AnyResource; action: Action } | undefined>(
       CAN_KEY,
       ctx.getHandler(),
     );
 
-    if (!user) throw new UnauthorizedException('Missing authenticated user');
     if (!meta) return true; // no policy metadata → allow
+    const req = ctx.switchToHttp().getRequest();
+    const user = req.user as { id: number; role: Role } | undefined;
+    if (!user) throw new UnauthorizedException('Missing authenticated user');
+    
 
     const { resource, action } = meta;
 
