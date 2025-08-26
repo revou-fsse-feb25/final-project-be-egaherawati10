@@ -106,8 +106,15 @@ export class AuthService {
   /** Called by AuthController after Local guard sets req.user */
   async login(user: SafeUser) {
     const access_token = await this.signAccessToken(user.id);
-    return { access_token };
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        role: user.role,
+      },
+    };
   }
+
 
   async logout(_userId: number) {
     return { message: 'Logged out successfully' };
