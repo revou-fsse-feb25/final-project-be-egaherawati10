@@ -9,7 +9,7 @@ import { PaginatedServiceItemResponseDto, ServiceItemResponseDto } from './dto/s
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('service-items')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('service-items')
 export class ServiceItemsController {
   constructor(

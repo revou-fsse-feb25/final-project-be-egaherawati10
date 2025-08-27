@@ -7,7 +7,7 @@ import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('prescriptions')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('prescriptions')
 export class PrescriptionsItemsController {
   constructor(@Inject(PRESCRIPTIONS_SERVICE) private readonly service: IPrescriptionsService) {}

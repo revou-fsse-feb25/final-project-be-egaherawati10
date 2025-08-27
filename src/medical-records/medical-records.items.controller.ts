@@ -6,7 +6,7 @@ import { Can } from 'src/common/guards/can.decorator';
 import { IMedicalRecordsService, MEDICAL_RECORDS_SERVICE } from './medical-records.service.interface';
 
 @ApiTags('medical-records')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller() // RouterModule: /medical-records
 export class MedicalRecordsItemsController {
   constructor(

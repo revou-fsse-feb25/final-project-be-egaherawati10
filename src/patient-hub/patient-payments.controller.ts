@@ -5,7 +5,7 @@ import { PatientHubService } from './patient-hub.service';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('patients.payments')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('patients/:patientId/payments')
 export class PatientPaymentsController {
   constructor(private readonly svc: PatientHubService) {}

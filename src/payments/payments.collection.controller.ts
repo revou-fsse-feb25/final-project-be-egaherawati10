@@ -8,7 +8,7 @@ import { PaginatedPaymentResponseDto, PaymentResponseDto } from './dto/payment-r
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medical-records.payments')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('medical-records/:medicalRecordId/payments')
 export class PaymentsCollectionController {
   constructor(@Inject(PAYMENTS_SERVICE) private readonly service: IPaymentsService) {}

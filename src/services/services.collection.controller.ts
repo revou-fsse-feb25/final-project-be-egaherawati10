@@ -8,7 +8,7 @@ import { PaginatedServiceResponseDto, ServiceResponseDto } from './dto/service-r
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medical-records.services')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('medical-records/:medicalRecordId/services')
 export class ServicesCollectionController {
   constructor(@Inject(SERVICES_SERVICE) private readonly service: IServicesService) {}

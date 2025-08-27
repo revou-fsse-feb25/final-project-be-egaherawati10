@@ -32,7 +32,7 @@ import {
 type Actor = { id: number; role: string };
 
 @ApiTags('patients.medical-records')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('patients/:patientId/medical-records')
 export class MedicalRecordsCollectionController {
   constructor(

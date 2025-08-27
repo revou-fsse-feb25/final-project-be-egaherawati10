@@ -26,7 +26,7 @@ import { PatientsService } from './patients.service';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('patients')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('patients')
 export class PatientsController {
   constructor(private readonly service: PatientsService) {}

@@ -1,4 +1,3 @@
-// rbac/capabilities.ts
 export type Role =
   | 'guest'                 // <— add guest for unauthenticated visitors
   | 'admin'

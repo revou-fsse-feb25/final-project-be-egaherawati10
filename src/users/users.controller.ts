@@ -10,11 +10,11 @@ import { Can } from '../common/guards/can.decorator';
 export const USERS_SERVICE = 'IUsersService' as const; // optional: centralize token
 
 @ApiTags('users')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('users')
 export class UsersController {
   constructor(
-    @Inject(USERS_SERVICE) private readonly service: IUsersService, // ✅ inject by token
+    @Inject(USERS_SERVICE) private readonly service: IUsersService,
   ) {}
 
   @Get()

@@ -12,7 +12,7 @@ class PaginationDto {
 }
 
 @ApiTags('services.lines')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('services/:serviceId/lines')
 export class ServiceLinesCollectionController {
   constructor(@Inject(SERVICES_SERVICE) private readonly service: IServicesService) {}

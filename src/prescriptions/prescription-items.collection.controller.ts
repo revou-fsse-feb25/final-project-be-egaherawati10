@@ -9,7 +9,7 @@ import { Can } from '../common/guards/can.decorator';
 class PaginationDto { page?: number = 1; limit?: number = 20; }
 
 @ApiTags('prescriptions.items')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('prescriptions/:prescriptionId/items')
 export class PrescriptionItemsCollectionController {
   constructor(@Inject(PRESCRIPTIONS_SERVICE) private readonly service: IPrescriptionsService) {}

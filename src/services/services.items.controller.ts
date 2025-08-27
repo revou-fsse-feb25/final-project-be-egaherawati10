@@ -7,7 +7,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('services')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('services')
 export class ServicesItemsController {
   constructor(@Inject(SERVICES_SERVICE) private readonly service: IServicesService) {}

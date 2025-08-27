@@ -7,7 +7,7 @@ import { UpdatePaymentItemDto } from './dto/update-payment-item.dto';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('payment-items')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('payment-items')
 export class PaymentItemsItemsController {
   constructor(@Inject(PAYMENTS_SERVICE) private readonly service: IPaymentsService) {}

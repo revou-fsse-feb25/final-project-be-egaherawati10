@@ -7,7 +7,7 @@ import { UpdateRecordDto } from './dto/update-record.dto';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('records')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller() // RouterModule: /records
 export class RecordsItemsController {
   constructor(

@@ -10,7 +10,7 @@ import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { Can } from '../common/guards/can.decorator';
 
 @ApiTags('medicines')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @Controller('medicines')
 export class MedicinesController {
   constructor(@Inject(MEDICINES_SERVICE) private readonly service: IMedicinesService) {}

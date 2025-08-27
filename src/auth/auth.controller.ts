@@ -34,14 +34,14 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOkResponse({ description: 'Logged out (access-only setup; no server-side state)' })
   logout(@Req() req: any) {
     return this.authService.logout(req.user.id);
   }
 
   @Get('profile')
-  @ApiBearerAuth()
+  @ApiBearerAuth('jwt')
   @ApiOkResponse({ description: 'Current user profile' })
   profile(@Req() req: any) {
     return this.authService.profile(req.user.id);

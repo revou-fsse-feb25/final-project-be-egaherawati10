@@ -35,7 +35,7 @@ function getUser(req: any): RequestUser {
 }
 
 @ApiTags('medical-records.records')
-@ApiBearerAuth()
+@ApiBearerAuth('jwt')
 @ApiParam({
   name: 'medicalRecordId',
   type: String, // <-- OpenAPI param is string
