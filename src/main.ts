@@ -7,7 +7,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api');
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -27,7 +27,6 @@ async function bootstrap() {
     .setTitle('EMR API')
     .setDescription('Electronic Medical Record REST API')
     .setVersion('1.0.0')
-    .addServer('/api/v1') // 👈 match the global prefix
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
       'jwt'
