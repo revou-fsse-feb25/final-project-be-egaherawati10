@@ -110,6 +110,7 @@ export class AuthService {
       access_token,
       user: {
         id: user.id,
+        name: user.name,
         role: user.role,
       },
     };

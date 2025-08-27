@@ -20,15 +20,16 @@ export class AuthController {
     return this.authService.register(dto);
   }
 
-@Post('login')
-@Public()
-@UseGuards(AuthGuard('local'))
-@HttpCode(200)
-@ApiOkResponse({ description: 'Returns access token and user info' })
-@ApiUnauthorizedResponse({ description: 'Invalid credentials or suspended account' })
-login(@Req() req: any) {
-  return this.authService.login(req.user);
-}
+  @Public()
+  @Post('login')
+  @UseGuards(AuthGuard('local'))
+  @HttpCode(200)
+  @ApiBody({ type: LoginDto })
+  @ApiOkResponse({ description: 'Returns access token and user info' })
+  @ApiUnauthorizedResponse({ description: 'Invalid credentials or suspended account' })
+  login(@Req() req: any) {
+    return this.authService.login(req.user);
+  }
 
 
   @Post('logout')

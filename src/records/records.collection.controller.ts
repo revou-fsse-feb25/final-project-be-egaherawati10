@@ -36,7 +36,13 @@ function getUser(req: any): RequestUser {
 
 @ApiTags('medical-records.records')
 @ApiBearerAuth()
-@ApiParam({ name: 'medicalRecordId', type: Number, required: true })
+@ApiParam({
+  name: 'medicalRecordId',
+  type: String, // <-- OpenAPI param is string
+  required: true,
+  description: 'ID of the medical record (integer)',
+  example: '123',
+})
 @Controller('medical-records/:medicalRecordId/records')
 export class RecordsCollectionController {
   constructor(

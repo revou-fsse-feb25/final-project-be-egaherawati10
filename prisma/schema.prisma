@@ -94,6 +94,12 @@ model User {
   paymentsCreated       Payment[]       @relation("PaymentCreatedBy")
   paymentsUpdated       Payment[]       @relation("PaymentUpdatedBy")
 
+  // new audit back-refs
+  medicinesCreated    Medicine[]   @relation("MedicineCreatedBy")
+  medicinesUpdated    Medicine[]   @relation("MedicineUpdatedBy")
+  serviceItemsCreated ServiceItem[] @relation("ServiceItemCreatedBy")
+  serviceItemsUpdated ServiceItem[] @relation("ServiceItemUpdatedBy")
+
   @@index([role, status])
 }
 
@@ -121,10 +127,12 @@ model PatientProfile {
   @@index([gender])
   @@index([phone])
   @@index([clerkId])
+  @@index([deletedAt])
 }
 
 model MedicalRecord {
   id        Int       @id @default(autoincrement())
+  code      String    @unique @default(cuid()) // stable external reference
   patientId Int
   doctorId  Int
   clerkId   Int
@@ -151,6 +159,7 @@ model MedicalRecord {
 
   @@index([patientId, visitDate])
   @@index([doctorId, visitDate])
+  @@index([deletedAt])
 }
 
 model Record {
@@ -178,6 +187,7 @@ model Record {
   @@index([medicalRecordId])
   @@index([patientId])
   @@index([doctorId])
+  @@index([deletedAt])
 }
 
 model Medicine {
@@ -196,11 +206,18 @@ model Medicine {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
+  // audit
+  createdById Int?
+  updatedById Int?
+  createdBy   User? @relation("MedicineCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy   User? @relation("MedicineUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   prescriptionItems PrescriptionItem[]
 
   @@unique([name, dosage])
   @@index([type])
   @@index([expiryDate])
+  @@index([deletedAt])
 }
 
 model Prescription {
@@ -236,6 +253,7 @@ model Prescription {
   @@index([doctorId])
   @@index([pharmacistId])
   @@index([status, dateDispensed])
+  @@index([deletedAt])
 }
 
 model PrescriptionItem {
@@ -283,6 +301,7 @@ model Service {
   @@index([medicalRecordId])
   @@index([status])
   @@index([doctorId, status])
+  @@index([deletedAt])
 }
 
 model ServiceItem {
@@ -293,9 +312,16 @@ model ServiceItem {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  // audit
+  createdById Int?
+  updatedById Int?
+  createdBy   User? @relation("ServiceItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedBy   User? @relation("ServiceItemUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   services ServiceOnServiceItem[]
 
   @@index([price])
+  @@index([deletedAt])
 }
 
 model ServiceOnServiceItem {
@@ -342,6 +368,7 @@ model Payment {
   @@index([patientId, issuedAt])
   @@index([status, method])
   @@index([medicalRecordId])
+  @@index([deletedAt])
 }
 
 model PaymentItem {
