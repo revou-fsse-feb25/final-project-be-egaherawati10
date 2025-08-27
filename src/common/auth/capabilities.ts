@@ -1,4 +1,6 @@
+// rbac/capabilities.ts
 export type Role =
+  | 'guest'                 // <— add guest for unauthenticated visitors
   | 'admin'
   | 'doctor'
   | 'pharmacist'
@@ -7,6 +9,9 @@ export type Role =
   | 'registration_clerk';
 
 export type Resource =
+  | 'Auth'                  // <— meta: login/register/logout UI
+  | 'Profile'               // <— meta: /auth/profile ("me")
+  | 'Users'
   | 'Patient'
   | 'MedicalRecord'
   | 'Record'
@@ -25,8 +30,20 @@ type CapabilityMatrix = {
   [R in Role]: Partial<{ [Res in Resource]?: Action[] }>;
 };
 
-export const CAPABILITIES = {
+const AUTHENTICATED_BASE: Partial<Record<Resource, Action[]>> = {
+  Auth: ['read'],           // show logout button etc
+  Profile: ['read', 'update'], // view & edit own profile
+};
+
+export const CAPABILITIES: CapabilityMatrix = {
+  guest: {
+    Auth: ['read', 'create'], // show login/register; allow posting login/register forms
+    // no Profile access
+  },
+
   admin: {
+    ...AUTHENTICATED_BASE,
+    Users: ['read'],
     Patient: ['read', 'create', 'update', 'delete'],
     MedicalRecord: ['read', 'create', 'update', 'delete'],
     Record: ['read', 'create', 'update', 'delete'],
@@ -41,6 +58,7 @@ export const CAPABILITIES = {
   },
 
   doctor: {
+    ...AUTHENTICATED_BASE,
     Patient: ['read'],
     MedicalRecord: ['read', 'update'],
     Record: ['read', 'create', 'update', 'delete'],
@@ -55,6 +73,7 @@ export const CAPABILITIES = {
   },
 
   pharmacist: {
+    ...AUTHENTICATED_BASE,
     Patient: ['read'],
     MedicalRecord: ['read'],
     Prescription: ['read', 'create', 'update', 'delete'],
@@ -65,6 +84,7 @@ export const CAPABILITIES = {
   },
 
   cashier: {
+    ...AUTHENTICATED_BASE,
     Patient: ['read'],
     MedicalRecord: ['read'],
     Payment: ['read', 'create', 'update'],
@@ -78,18 +98,20 @@ export const CAPABILITIES = {
   },
 
   registration_clerk: {
+    ...AUTHENTICATED_BASE,
     Patient: ['read', 'create', 'update', 'delete'],
     MedicalRecord: ['read', 'create', 'update', 'delete'],
   },
 
   patient: {
-    Patient: ['read'],        // their own
-    MedicalRecord: ['read'],  // their own
-    Prescription: ['read'],   // their own
-    Service: ['read'],        // their own
-    Payment: ['read'],        // their own
+    ...AUTHENTICATED_BASE,
+    Patient: ['read'],        // (own) — enforce owner on the backend
+    MedicalRecord: ['read'],  // (own)
+    Prescription: ['read'],   // (own)
+    Service: ['read'],        // (own)
+    Payment: ['read'],        // (own)
   },
-} satisfies CapabilityMatrix;
+};
 
 export function canDo(role: Role, resource: Resource, action: Action): boolean {
   return (CAPABILITIES[role]?.[resource] ?? []).includes(action);
