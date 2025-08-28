@@ -1,5 +1,5 @@
 export type Role =
-  | 'guest'                 // <— add guest for unauthenticated visitors
+  | 'guest'
   | 'admin'
   | 'doctor'
   | 'pharmacist'
@@ -8,8 +8,8 @@ export type Role =
   | 'registration_clerk';
 
 export type Resource =
-  | 'Auth'                  // <— meta: login/register/logout UI
-  | 'Profile'               // <— meta: /auth/profile ("me")
+  | 'Auth'
+  | 'Profile'
   | 'Users'
   | 'Patient'
   | 'MedicalRecord'
@@ -17,9 +17,9 @@ export type Resource =
   | 'Prescription'
   | 'PrescriptionItem'
   | 'Medicine'
-  | 'Service'
-  | 'ServiceOnServiceItem'
-  | 'ServiceItem'
+  | 'Service'                // instance: ordered service on a medical record
+  | 'ServiceOnServiceItem'   // catalog mapping (join)
+  | 'ServiceItem'            // catalog item
   | 'Payment'
   | 'PaymentItem';
 
@@ -30,81 +30,80 @@ type CapabilityMatrix = {
 };
 
 const AUTHENTICATED_BASE: Partial<Record<Resource, Action[]>> = {
-  Auth: ['read'],           // show logout button etc
-  Profile: ['read', 'update'], // view & edit own profile
+  Auth: ['read'],
+  Profile: ['read', 'update'], // (own)
 };
 
 export const CAPABILITIES: CapabilityMatrix = {
   guest: {
-    Auth: ['read', 'create'], // show login/register; allow posting login/register forms
-    // no Profile access
+    Auth: ['read', 'create'], // login/register forms
   },
 
   admin: {
     ...AUTHENTICATED_BASE,
-    Users: ['read'],
+    Users: ['read', 'create', 'update', 'delete'],
     Patient: ['read', 'create', 'update', 'delete'],
     MedicalRecord: ['read', 'create', 'update', 'delete'],
     Record: ['read', 'create', 'update', 'delete'],
     Prescription: ['read', 'create', 'update', 'delete'],
     PrescriptionItem: ['read', 'create', 'update', 'delete'],
-    Medicine: ['read', 'create', 'update', 'delete'],
-    Service: ['read', 'create', 'update', 'delete'],
-    ServiceOnServiceItem: ['read', 'create', 'update', 'delete'],
-    ServiceItem: ['read', 'create', 'update', 'delete'],
+    Medicine: ['read', 'create', 'update', 'delete'],            // catalog
+    ServiceItem: ['read', 'create', 'update', 'delete'],         // catalog
+    ServiceOnServiceItem: ['read', 'create', 'update', 'delete'],// catalog mapping
+    Service: ['read', 'create', 'update', 'delete'],             // instances
     Payment: ['read', 'create', 'update', 'delete'],
     PaymentItem: ['read', 'create', 'update', 'delete'],
   },
 
   doctor: {
     ...AUTHENTICATED_BASE,
-    Patient: ['read'],
-    MedicalRecord: ['read', 'update'],
-    Record: ['read', 'create', 'update', 'delete'],
-    Prescription: ['read', 'create', 'update', 'delete'],
-    PrescriptionItem: ['read', 'create', 'update', 'delete'],
-    Service: ['read', 'create', 'update', 'delete'],
-    ServiceOnServiceItem: ['read', 'create', 'update', 'delete'],
-    Medicine: ['read'],
-    ServiceItem: ['read'],
-    Payment: ['read', 'create', 'update'],
-    PaymentItem: ['read', 'update'],
+    Patient: ['read'],                                  // (scope: assigned/own patients)
+    MedicalRecord: ['read', 'create', 'update'],        // open/update episodes (no delete)
+    Record: ['read', 'create', 'update'],               // SOAP entries etc. (no delete)
+    Prescription: ['read', 'create', 'update'],         // issue & edit until dispensed
+    PrescriptionItem: ['read', 'create', 'update'],
+    Service: ['read', 'create', 'update'],              // order/modify services for visit
+    Medicine: ['read'],                                 // view catalog only
+    ServiceItem: ['read'],                              // view catalog only
+    Payment: ['read'],                                  // view billing status
+    PaymentItem: ['read'],
   },
 
   pharmacist: {
     ...AUTHENTICATED_BASE,
     Patient: ['read'],
     MedicalRecord: ['read'],
-    Prescription: ['read', 'create', 'update', 'delete'],
-    PrescriptionItem: ['read', 'create', 'update', 'delete'],
-    Medicine: ['read', 'create', 'update', 'delete'],
+    Prescription: ['read', 'update'],                   // mark dispensed, substitutions policy
+    PrescriptionItem: ['read', 'update'],
+    Medicine: ['read', 'create', 'update', 'delete'],   // manage inventory/catalog
     Payment: ['read'],
     PaymentItem: ['read'],
+    // no Service/Record editing
   },
 
   cashier: {
     ...AUTHENTICATED_BASE,
     Patient: ['read'],
     MedicalRecord: ['read'],
-    Payment: ['read', 'create', 'update'],
+    Payment: ['read', 'create', 'update'],              // create invoices, capture payments
     PaymentItem: ['read', 'create', 'update', 'delete'],
-    Service: ['read', 'update'],
-    ServiceItem: ['read'],
-    ServiceOnServiceItem: ['read', 'create', 'update', 'delete'],
-    Prescription: ['read', 'update'],
-    PrescriptionItem: ['read', 'create', 'update', 'delete'],
-    Medicine: ['read'],
+    Service: ['read'],                                  // to price/bundle on invoice
+    Prescription: ['read'],
+    PrescriptionItem: ['read'],
+    // catalog edits removed:
+    // ServiceItem: ['read'] could be added if needed for pricing visibility
   },
 
   registration_clerk: {
     ...AUTHENTICATED_BASE,
-    Patient: ['read', 'create', 'update', 'delete'],
-    MedicalRecord: ['read', 'create', 'update', 'delete'],
+    Patient: ['read', 'create', 'update'],              // register/update demographics
+    MedicalRecord: ['read', 'create', 'update'],        // open/assign episodes
+    // no deletes to preserve audit trail
   },
 
   patient: {
     ...AUTHENTICATED_BASE,
-    Patient: ['read'],        // (own) — enforce owner on the backend
+    Patient: ['read'],        // (own)
     MedicalRecord: ['read'],  // (own)
     Prescription: ['read'],   // (own)
     Service: ['read'],        // (own)

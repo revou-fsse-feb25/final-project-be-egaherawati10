@@ -3,10 +3,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
   app.setGlobalPrefix('api');
 
   app.useGlobalPipes(new ValidationPipe({
@@ -20,7 +22,7 @@ async function bootstrap() {
     origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   });
 
   const config = new DocumentBuilder()
@@ -31,6 +33,7 @@ async function bootstrap() {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
       'jwt'
     )
+    .addCookieAuth('access', { type: 'apiKey', in: 'cookie', name: 'access' })
     .build();
 
   const doc = SwaggerModule.createDocument(app, config, { deepScanRoutes: true });
@@ -41,6 +44,6 @@ async function bootstrap() {
     customSiteTitle: 'EMR API Docs',
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
 }
 bootstrap();

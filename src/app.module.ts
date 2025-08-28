@@ -6,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { UsersModule } from './users/users.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { PolicyGuard } from './common/guards/policy.guard';
 import { PaymentsModule } from './payments/payments.module';
 import { MedicinesModule } from './medicines/medicines.module';
@@ -24,16 +25,9 @@ import { RecordsModule } from './records/records.module';
 
 @Module({
   imports: [
-     ConfigModule.forRoot({
-      isGlobal: true,
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 6000,
-          limit: 10,
-        },
-      ],
+      throttlers: [{ ttl: 60_000, limit: 10 }], // 10 req/min
     }),
     PrismaModule,
     AuthModule,
@@ -43,8 +37,6 @@ import { RecordsModule } from './records/records.module';
     MedicalRecordsCollectionModule,
     RecordsCollectionModule,
     RecordsModule,
-    MedicalRecordsItemsModule,
-    MedicalRecordsCollectionModule,
     RecordsItemsModule,
     ServicesModule,
     ServiceItemsModule,
@@ -56,12 +48,9 @@ import { RecordsModule } from './records/records.module';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, 
-      useClass: JwtAuthGuard 
-    },
-    { provide: APP_GUARD, 
-      useClass: PolicyGuard 
-    },
+    { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PolicyGuard },
   ],
 })
 export class AppModule {}

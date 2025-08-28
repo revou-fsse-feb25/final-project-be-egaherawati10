@@ -20,108 +20,140 @@ type SafeUser = {
   email: string;
   role: UserRole;
   status: UserStatus;
-  createdAt: Date;
-  updatedAt: Date;
 };
+
+function parseTtl(input: string | undefined, fallbackMs: number): number {
+  if (!input) return fallbackMs;
+  const m = /^\s*(\d+)\s*([smhdw]?)\s*$/i.exec(input);
+  if (!m) return fallbackMs;
+  const n = parseInt(m[1], 10);
+  const unit = (m[2] || 'm').toLowerCase();
+  const mult =
+    unit === 's' ? 1000 :
+    unit === 'm' ? 60 * 1000 :
+    unit === 'h' ? 60 * 60 * 1000 :
+    unit === 'd' ? 24 * 60 * 60 * 1000 :
+    unit === 'w' ? 7 * 24 * 60 * 60 * 1000 :
+    60 * 1000;
+  return n * mult;
+}
 
 @Injectable()
 export class AuthService {
+  // initialize in the constructor (not here)
+  private _accessTtlMs!: number;
+  private _refreshTtlMs!: number;
+
+  // expose via getters for the controller
+  get accessTtlMs(): number { return this._accessTtlMs; }
+  get refreshTtlMs(): number { return this._refreshTtlMs; }
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
+    private readonly jwt: JwtService,
     private readonly cfg: ConfigService,
-  ) {}
-
-  private accessTtl() {
-    return this.cfg.get<string>('JWT_ACCESS_TTL') ?? '15m';
-  }
-  private accessSecret() { 
-    return this.cfg.getOrThrow<string>('JWT_ACCESS_SECRET'); 
+  ) {
+    this._accessTtlMs = parseTtl(this.cfg.get<string>('ACCESS_TTL'), 15 * 60 * 1000);
+    this._refreshTtlMs = parseTtl(this.cfg.get<string>('REFRESH_TTL'), 7 * 24 * 60 * 60 * 1000);
   }
 
-  /** Sign an access token embedding tokenVersion and a fresh jti */
-  private async signAccessToken(userId: number) {
-    const u = await this.prisma.user.findUnique({
+  private toSafe(u: any): SafeUser {
+    const { id, name, username, email, role, status } = u;
+    return { id, name, username, email, role, status };
+  }
+
+  async register(dto: RegisterDto): Promise<SafeUser> {
+    const exists = await this.prisma.user.findFirst({
+      where: { OR: [{ username: dto.username }, { email: dto.email }] },
+      select: { id: true },
+    });
+    if (exists) throw new ConflictException('Username or email already exists');
+    const hashed = await bcrypt.hash(dto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        name: dto.name,
+        username: dto.username,
+        email: dto.email,
+        password: hashed,
+        role: dto.role,
+        status: dto.status ?? UserStatus.active, // enum
+      },
+    });
+    return this.toSafe(user);
+  }
+
+  async validateUser(usernameOrEmail: string, password: string): Promise<SafeUser> {
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }] },
+    });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) throw new UnauthorizedException('Invalid credentials');
+    if (user.status !== UserStatus.active) throw new ForbiddenException('Account is not active');
+    return this.toSafe(user);
+  }
+
+  private signAccess(payload: { sub: number; role: string; tv: number; jti: string }) {
+    return this.jwt.sign(
+      { ...payload, typ: 'access' },
+      {
+        secret: this.cfg.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: Math.floor(this._accessTtlMs / 1000), // seconds
+      },
+    );
+  }
+
+  private signRefresh(payload: { sub: number; tv: number; jti: string }) {
+    return this.jwt.sign(
+      { ...payload, typ: 'refresh' },
+      {
+        secret: this.cfg.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        expiresIn: Math.floor(this._refreshTtlMs / 1000),
+      },
+    );
+  }
+
+  async issueTokens(userId: number) {
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, tokenVersion: true, status: true },
+      select: { tokenVersion: true, role: true },
     });
-    if (!u) throw new NotFoundException('User not found');
-    if (u.status !== UserStatus.active) throw new ForbiddenException('Account is not active');
+    if (!user) throw new NotFoundException('User not found');
 
-    const payload = {
-      sub: u.id,
-      role: u.role,
-      tv: u.tokenVersion,
-      jti: crypto.randomUUID(),
-      typ: 'access' as const,
-    };
-
-    return this.jwtService.signAsync(payload, {
-      secret: this.accessSecret(),
-      expiresIn: this.accessTtl(),
-    });
+    const jti = crypto.randomUUID();
+    const access = this.signAccess({ sub: userId, role: user.role, tv: user.tokenVersion, jti });
+    const refresh = this.signRefresh({ sub: userId, tv: user.tokenVersion, jti });
+    return { access, refresh, role: user.role };
   }
 
-  /** Create a new user; default status=active. */
-  async register(data: RegisterDto) {
-    const username = data.username.trim().toLowerCase();
-    const email = data.email.trim().toLowerCase();
-    const hash = await bcrypt.hash(data.password, 10);
-
+  async verifyRefresh(token: string) {
     try {
-      const user = await this.prisma.user.create({
-        data: {
-          name: data.name,
-          username,
-          email,
-          password: hash,
-          role: (data as any).role ?? UserRole.patient,
-          status: UserStatus.active,
-        },
-        select: {
-          id: true, name: true, username: true, email: true,
-          role: true, status: true, createdAt: true, updatedAt: true,
-        },
+      const payload = await this.jwt.verifyAsync<any>(token, {
+        secret: this.cfg.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-      return { message: 'Registration successful', user };
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('Username or email already exists');
-      }
-      throw e;
+      if (payload?.typ !== 'refresh') throw new UnauthorizedException('Invalid refresh type');
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { tokenVersion: true },
+      });
+      if (!user) throw new UnauthorizedException('Invalid user');
+      if (user.tokenVersion !== payload.tv) throw new UnauthorizedException('Session revoked');
+
+      return payload as { sub: number; tv: number; jti: string; typ: 'refresh' };
+    } catch {
+      throw new UnauthorizedException('Invalid refresh');
     }
   }
 
-  async validateUser(username: string, password: string): Promise<SafeUser | null> {
-    const key = username.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { username: key } });
-  if (!user) return null;
-    const ok = await bcrypt.compare(password, user.password);
-  if (!ok) return null;
-  if (user.status !== UserStatus.active) throw new  UnauthorizedException('Account is suspended');
-  const { password: _pw, ...safe } = user as any;
-  return safe as SafeUser;
-}
-
-  /** Called by AuthController after Local guard sets req.user */
-  async login(user: SafeUser) {
-    const access_token = await this.signAccessToken(user.id);
-    return {
-      access_token,
-      user: {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-      },
-    };
+  async bumpTokenVersion(userId: number) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { tokenVersion: { increment: 1 } },
+      select: { id: true },
+    });
   }
 
-
-  async logout(_userId: number) {
-    return { message: 'Logged out successfully' };
-  }
-
-  /** Simple profile lookup */
   async profile(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

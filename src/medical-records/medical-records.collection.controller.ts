@@ -12,7 +12,10 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
+  ApiOperation,
   ApiParam,
   ApiQuery,
   ApiTags,
@@ -29,7 +32,8 @@ import {
   MEDICAL_RECORDS_SERVICE,
 } from './medical-records.service.interface';
 
-type Actor = { id: number; role: string };
+// Align with JwtStrategy.validate / UserCtx
+type ReqUser = { user: { id: number; role: string } };
 
 @ApiTags('patients.medical-records')
 @ApiBearerAuth('jwt')
@@ -42,41 +46,50 @@ export class MedicalRecordsCollectionController {
 
   @Get()
   @Can('MedicalRecord', 'read')
+  @ApiOperation({ summary: 'List medical records for a patient' })
   @ApiParam({ name: 'patientId', type: Number })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number, example: 20 })
   @ApiOkResponse({ type: PaginatedMedicalRecordResponseDto })
+  @ApiNotFoundResponse({ description: 'Patient not found' })
+  @ApiForbiddenResponse({ description: 'Role not allowed' })
   list(
-    @Param('patientId', ParseIntPipe) patientId: number,
+    @Param('patientId', new ParseIntPipe({ errorHttpStatusCode: 422 })) patientId: number,
     @Query() q: QueryMedicalRecordDto,
-    @Req() req: any,
+    @Req() req: ReqUser,
   ) {
-    const actor: Actor = { id: req.user.id, role: req.user.role };
+    const actor = { id: req.user.id, role: req.user.role };
     return this.service.listForPatient(patientId, q, actor);
   }
 
   @Get(':medicalRecordId')
   @Can('MedicalRecord', 'read')
+  @ApiOperation({ summary: 'Get one medical record for a patient' })
   @ApiParam({ name: 'patientId', type: Number })
   @ApiParam({ name: 'medicalRecordId', type: Number })
   @ApiOkResponse({ type: MedicalRecordResponseDto })
+  @ApiNotFoundResponse({ description: 'Medical record not found' })
+  @ApiForbiddenResponse({ description: 'Role not allowed' })
   getOne(
-    @Param('patientId', ParseIntPipe) patientId: number,
-    @Param('medicalRecordId', ParseIntPipe) medicalRecordId: number,
-    @Req() req: any,
+    @Param('patientId', new ParseIntPipe({ errorHttpStatusCode: 422 })) patientId: number,
+    @Param('medicalRecordId', new ParseIntPipe({ errorHttpStatusCode: 422 })) medicalRecordId: number,
+    @Req() req: ReqUser,
   ) {
-    const actor: Actor = { id: req.user.id, role: req.user.role };
+    const actor = { id: req.user.id, role: req.user.role };
     return this.service.getOneForPatient(patientId, medicalRecordId, actor);
   }
 
   @Post()
   @Can('MedicalRecord', 'create')
+  @ApiOperation({ summary: 'Create a medical record for a patient' })
   @ApiParam({ name: 'patientId', type: Number })
   @ApiCreatedResponse({ type: MedicalRecordResponseDto })
+  @ApiNotFoundResponse({ description: 'Patient not found' })
+  @ApiForbiddenResponse({ description: 'Role not allowed' })
   create(
-    @Param('patientId', ParseIntPipe) patientId: number,
+    @Param('patientId', new ParseIntPipe({ errorHttpStatusCode: 422 })) patientId: number,
     @Body() dto: CreateMedicalRecordForPatientDto,
-    @Req() req: any,
+    @Req() req: ReqUser,
   ) {
     return this.service.createForPatient(patientId, dto, req.user.id);
   }

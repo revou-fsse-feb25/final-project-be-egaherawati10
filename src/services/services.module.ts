@@ -6,10 +6,16 @@ import { ServicesService } from './services.service';
 import { ServicesRepository } from './services.repository';
 import { ServiceLinesRepository } from './service-lines.repository';
 import { SERVICES_SERVICE } from './services.service.interface';
+import { ServiceLinesCollectionController } from './service-lines.collection.controller';
+import { ServiceLinesItemsController } from './service-lines.items.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [ServicesCollectionController],
+  controllers: [
+    ServicesCollectionController, 
+    ServiceLinesCollectionController, 
+    ServiceLinesItemsController
+  ],
   providers: [
     // concrete classes
     ServicesRepository,
