@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ENUMS
 enum UserRole {
   admin
   doctor
@@ -59,8 +58,6 @@ enum PaymentItemKind {
   prescription_item
   service_item
 }
-
-// MODELS
 
 model User {
   id           Int        @id @default(autoincrement())
