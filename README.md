@@ -18,6 +18,8 @@ Supports authentication/authorization (JWT in cookies), patient management, medi
 
 ## 🧩 ERD
 
+![ERD](ERD.png)
+
 
 ## 📂 Project Structure
 src/
@@ -39,7 +41,10 @@ main.ts # bootstrap
 
 ## ⚙️ Setup
 
-### 1. Install dependencies
+### 1. Clone repository and install dependencies
+
+git clone https://github.com/revou-fsse-feb25/final-project-be-egaherawati10.git
+
 ```bash
 npm install
 
@@ -52,7 +57,7 @@ PORT=3000
 CORS_ORIGINS=http://localhost:3001
 
 # Database
-DATABASE_URL="postgresql://postgres:KDvFRrQnxHXSWMprTPajYhhXaxMPRIMT@turntable.proxy.rlwy.net:14083/railway"
+DATABASE_URL=https://<your-railway-backend>.up.railway.app
 
 # JWT
 JWT_ACCESS_SECRET=super-long-random
@@ -112,6 +117,9 @@ http://localhost:3000/docs
 
 Supports both Bearer JWT and Cookie JWT auth.
 
+Swagger Preview
+![Swagger](swagger-preview.png)
+
 🧪 Testing
 
 Use Postman or curl:
@@ -158,3 +166,7 @@ Cashier: manage payments
 Registration Clerk: manage patients & medical records
 
 Patient: read-only access to their own data
+
+🚢 Deployment Link
+
+https://final-project-be-egaherawati10-production.up.railway.app
