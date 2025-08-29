@@ -48,9 +48,9 @@ import { RecordsModule } from './records/records.module';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, useClass: CsrfGuard },
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
-    { provide: APP_GUARD, useClass: PolicyGuard },
+    // { provide: APP_GUARD, useClass: CsrfGuard },
+    // { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // { provide: APP_GUARD, useClass: PolicyGuard },
   ],
 })
 export class AppModule {}

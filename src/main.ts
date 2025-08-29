@@ -1,14 +1,11 @@
-// src/main.ts
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
-// 👇 Interop-safe cookie-parser import
 import * as cookieParserNS from 'cookie-parser';
 const cookieParser: (...args: any[]) => any =
-  // if ESM, function lives on .default; if CJS, the module itself is a function
   ((cookieParserNS as any).default ?? (cookieParserNS as any));
 
 async function bootstrap() {
@@ -37,6 +34,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
+    exposedHeaders: ['Content-Length', 'X-Total-Count']
   });
 
   // trust proxy so Secure cookies work behind Railway
