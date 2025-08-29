@@ -16,55 +16,62 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request, Response, CookieOptions } from 'express';
+
 import { Public } from '../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import type { Request, Response } from 'express';
+
+// ===== Cookie config =====
+const ACCESS_COOKIE = 'access_token';
+const REFRESH_COOKIE = 'refresh_token';
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 const COOKIE_SECURE =
   IS_PROD ? true : process.env.AUTH_COOKIE_SECURE === 'true';
 const COOKIE_DOMAIN = process.env.AUTH_COOKIE_DOMAIN || undefined;
 
-const RAW_SAMESITE = (process.env.AUTH_SAME_SITE ?? (IS_PROD ? 'none' : 'lax')) as
-  | 'lax'
-  | 'strict'
-  | 'none';
+const RAW_SAMESITE = String(
+  process.env.AUTH_SAME_SITE ?? (IS_PROD ? 'none' : 'lax'),
+).toLowerCase() as 'lax' | 'strict' | 'none';
+
+// Browsers require Secure when SameSite=None
 const COOKIE_SAMESITE =
   !COOKIE_SECURE && RAW_SAMESITE === 'none' ? 'lax' : RAW_SAMESITE;
 
-function setAuthCookies(res: Response, access: string, refresh: string, accessTtlMs: number, refreshTtlMs: number) {
-  res.cookie('access_token', access, {
-    httpOnly: true,
-    secure: COOKIE_SECURE,
-    sameSite: COOKIE_SAMESITE,
-    domain: COOKIE_DOMAIN, // undefined on localhost → no Domain attr
-    path: '/',
-    maxAge: accessTtlMs,
-  });
+const baseCookie: CookieOptions = {
+  httpOnly: true,
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAMESITE,
+  domain: COOKIE_DOMAIN, // undefined on localhost → no Domain attr
+  path: '/',
+};
 
-  res.cookie('refresh_token', refresh, {
-    httpOnly: true,
-    secure: COOKIE_SECURE,
-    sameSite: COOKIE_SAMESITE,
-    domain: COOKIE_DOMAIN,
-    path: '/',
-    maxAge: refreshTtlMs,
-  });
+function setAuthCookies(
+  res: Response,
+  access: string,
+  refresh: string,
+  accessTtlMs: number,
+  refreshTtlMs: number,
+) {
+  res.cookie(ACCESS_COOKIE, access, { ...baseCookie, maxAge: accessTtlMs });
+  res.cookie(REFRESH_COOKIE, refresh, { ...baseCookie, maxAge: refreshTtlMs });
 }
 
 function clearAuthCookies(res: Response) {
-  const base = {
-    sameSite: COOKIE_SAMESITE,
-    secure: COOKIE_SECURE,
-    domain: COOKIE_DOMAIN,
-  } as const;
-
-  res.clearCookie('access_token', { ...base, path: '/' });
-  res.clearCookie('refresh_token', { ...base, path: '/' });
-  res.clearCookie('refresh_token', { ...base, path: '/api/auth/refresh' });
+  // Must use same attributes to ensure deletion on all browsers
+  res.clearCookie(ACCESS_COOKIE, baseCookie);
+  res.clearCookie(REFRESH_COOKIE, baseCookie);
 }
+
+function getRefreshCookie(req: Request): string | undefined {
+  // cookie-parser puts unsigned cookies on req.cookies and signed on req.signedCookies
+  const anyReq = req as any;
+  return anyReq?.cookies?.[REFRESH_COOKIE] ?? anyReq?.signedCookies?.[REFRESH_COOKIE];
+}
+
+// =========================
 
 @ApiTags('auth')
 @Controller('auth')
@@ -85,10 +92,7 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ description: 'Logged in; cookies set' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
-  async login(
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const user = await this.authService.validateUser(dto.username, dto.password);
     const { access, refresh } = await this.authService.issueTokens(user.id);
 
@@ -100,10 +104,9 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   @ApiOkResponse({ description: 'Access token refreshed' })
+  @ApiUnauthorizedResponse({ description: 'Missing/invalid refresh token' })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const token =
-      (req as any).cookies?.refresh_token ??
-      (req as any).signedCookies?.refresh_token;
+    const token = getRefreshCookie(req);
     if (!token) throw new UnauthorizedException('No refresh token');
 
     const payload = await this.authService.verifyRefresh(token);
@@ -115,7 +118,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  @ApiCookieAuth('access_token')
+  @ApiCookieAuth(ACCESS_COOKIE)
   @ApiOkResponse({ description: 'Clears cookies and revokes all sessions' })
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     if (req?.user?.id) {
@@ -125,7 +128,7 @@ export class AuthController {
     return { ok: true };
   }
 
-  @ApiCookieAuth('access_token')
+  @ApiCookieAuth(ACCESS_COOKIE)
   @Get('profile')
   @ApiOkResponse({ description: 'Current user profile' })
   async profile(@Req() req: any) {
