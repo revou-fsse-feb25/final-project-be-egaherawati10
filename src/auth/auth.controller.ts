@@ -1,16 +1,74 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res, UnauthorizedException } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { Public } from '../common/auth/public.decorator';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { Request, Response } from 'express';
 
-const cookieBase = {
-  httpOnly: true,
-  sameSite: (process.env.AUTH_SAME_SITE as 'lax' | 'none' | 'strict') ?? 'lax',
-  secure: process.env.NODE_ENV === 'production',
-} as const;
+// ---------- cookie helpers (env-aware) ----------
+const IS_PROD = process.env.NODE_ENV === 'production';
+const COOKIE_SECURE =
+  IS_PROD ? true : process.env.AUTH_COOKIE_SECURE === 'true';
+const COOKIE_DOMAIN = process.env.AUTH_COOKIE_DOMAIN || undefined;
+
+const RAW_SAMESITE = (process.env.AUTH_SAME_SITE ?? (IS_PROD ? 'none' : 'lax')) as
+  | 'lax'
+  | 'strict'
+  | 'none';
+// SameSite=None requires Secure=true; if not secure (e.g., http localhost), fall back to Lax.
+const COOKIE_SAMESITE =
+  !COOKIE_SECURE && RAW_SAMESITE === 'none' ? 'lax' : RAW_SAMESITE;
+
+function setAuthCookies(res: Response, access: string, refresh: string, accessTtlMs: number, refreshTtlMs: number) {
+  res.cookie('access_token', access, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAMESITE,
+    domain: COOKIE_DOMAIN, // undefined on localhost → no Domain attr
+    path: '/',
+    maxAge: accessTtlMs,
+  });
+
+  // Keep refresh cookie available to any endpoint by using path '/'
+  res.cookie('refresh_token', refresh, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: COOKIE_SAMESITE,
+    domain: COOKIE_DOMAIN,
+    path: '/',
+    maxAge: refreshTtlMs,
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  const base = {
+    sameSite: COOKIE_SAMESITE,
+    secure: COOKIE_SECURE,
+    domain: COOKIE_DOMAIN,
+  } as const;
+
+  res.clearCookie('access_token', { ...base, path: '/' });
+  // Clear refresh cookie for both '/' and the old narrow path (defensive)
+  res.clearCookie('refresh_token', { ...base, path: '/' });
+  res.clearCookie('refresh_token', { ...base, path: '/api/auth/refresh' });
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -31,14 +89,16 @@ export class AuthController {
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ description: 'Logged in; cookies set' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // username + password (no email)
     const user = await this.authService.validateUser(dto.username, dto.password);
     const { access, refresh } = await this.authService.issueTokens(user.id);
 
-    res.cookie('access', access,  { ...cookieBase, path: '/',    maxAge: this.authService.accessTtlMs });
-    res.cookie('refresh', refresh,{ ...cookieBase, path: '/api', maxAge: this.authService.refreshTtlMs });
-
-    return { user }; // cookie-only contract
+    setAuthCookies(res, access, refresh, this.authService.accessTtlMs, this.authService.refreshTtlMs);
+    return { user };
   }
 
   @Public()
@@ -46,43 +106,34 @@ export class AuthController {
   @HttpCode(200)
   @ApiOkResponse({ description: 'Access token refreshed' })
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const token = (req as any).cookies?.refresh as string | undefined;
+    const token =
+      (req as any).cookies?.refresh_token ??
+      (req as any).signedCookies?.refresh_token;
     if (!token) throw new UnauthorizedException('No refresh token');
 
     const payload = await this.authService.verifyRefresh(token);
     const { access, refresh } = await this.authService.issueTokens(payload.sub);
 
-    res.cookie('access', access,  { ...cookieBase, path: '/',    maxAge: this.authService.accessTtlMs });
-    res.cookie('refresh', refresh,{ ...cookieBase, path: '/api', maxAge: this.authService.refreshTtlMs });
-
+    setAuthCookies(res, access, refresh, this.authService.accessTtlMs, this.authService.refreshTtlMs);
     return { ok: true };
   }
 
   @Post('logout')
   @HttpCode(200)
-  @ApiCookieAuth('access') // for Swagger clarity (cookie-auth app)
+  @ApiCookieAuth('access_token')
   @ApiOkResponse({ description: 'Clears cookies and revokes all sessions' })
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
     if (req?.user?.id) {
-      await this.authService.bumpTokenVersion(req.user.id); // logout ALL devices
+      await this.authService.bumpTokenVersion(req.user.id); // invalidate all tokens
     }
-    // Make deletion explicit (path/samesite/secure) to avoid CDN/proxy quirks
-    res.clearCookie('access',  { path: '/',   sameSite: cookieBase.sameSite, secure: cookieBase.secure });
-    res.clearCookie('refresh', { path: '/api', sameSite: cookieBase.sameSite, secure: cookieBase.secure });
+    clearAuthCookies(res);
     return { ok: true };
   }
 
-  @ApiCookieAuth('access') // cookie-based auth
+  @ApiCookieAuth('access_token')
   @Get('profile')
   @ApiOkResponse({ description: 'Current user profile' })
   async profile(@Req() req: any) {
     return this.authService.profile(req.user.id);
-  }
-
-  // --- (Optional) remove after debugging ---
-  @Public()
-  @Get('whoami-raw')
-  whoamiRaw(@Req() req: any) {
-    return { cookies: req.cookies ?? null, headers: req.headers };
   }
 }

@@ -1,7 +1,7 @@
 # Hera Clinic EMR – Backend
 
 A NestJS + Prisma + PostgreSQL backend for the Hera Clinic EMR system.  
-Supports authentication/authorization (JWT in cookies), patient management, medical records, prescriptions, pharmacy, services, and payments.  
+Supports authentication/authorization (JWT in cookies), patient management, medical records, prescriptions, pharmacy, services, and payments.
 
 ---
 
@@ -15,6 +15,9 @@ Supports authentication/authorization (JWT in cookies), patient management, medi
 - **CSRF Guard** for browser security
 
 ---
+
+## 🧩 ERD
+
 
 ## 📂 Project Structure
 src/
@@ -49,7 +52,7 @@ PORT=3000
 CORS_ORIGINS=http://localhost:3001
 
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/hera_emr"
+DATABASE_URL="postgresql://postgres:KDvFRrQnxHXSWMprTPajYhhXaxMPRIMT@turntable.proxy.rlwy.net:14083/railway"
 
 # JWT
 JWT_ACCESS_SECRET=super-long-random
@@ -66,7 +69,7 @@ npx prisma migrate dev
 
 (Optional: seed sample data)
 
-npx prisma db seed
+npm run seed
 
 4. Start the server
 npm run start:dev
@@ -146,7 +149,7 @@ For Vercel/Netlify frontend integration, configure backend CORS & CSRF origins.
 
 Admin: full access
 
-Doctor: manage medical records & prescriptions
+Doctor: manage medical records, services, & prescriptions
 
 Pharmacist: manage prescriptions & medicines
 
