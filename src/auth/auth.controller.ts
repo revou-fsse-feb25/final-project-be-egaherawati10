@@ -22,7 +22,6 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import type { Request, Response } from 'express';
 
-// ---------- cookie helpers (env-aware) ----------
 const IS_PROD = process.env.NODE_ENV === 'production';
 const COOKIE_SECURE =
   IS_PROD ? true : process.env.AUTH_COOKIE_SECURE === 'true';
@@ -32,7 +31,6 @@ const RAW_SAMESITE = (process.env.AUTH_SAME_SITE ?? (IS_PROD ? 'none' : 'lax')) 
   | 'lax'
   | 'strict'
   | 'none';
-// SameSite=None requires Secure=true; if not secure (e.g., http localhost), fall back to Lax.
 const COOKIE_SAMESITE =
   !COOKIE_SECURE && RAW_SAMESITE === 'none' ? 'lax' : RAW_SAMESITE;
 
@@ -46,7 +44,6 @@ function setAuthCookies(res: Response, access: string, refresh: string, accessTt
     maxAge: accessTtlMs,
   });
 
-  // Keep refresh cookie available to any endpoint by using path '/'
   res.cookie('refresh_token', refresh, {
     httpOnly: true,
     secure: COOKIE_SECURE,
@@ -65,7 +62,6 @@ function clearAuthCookies(res: Response) {
   } as const;
 
   res.clearCookie('access_token', { ...base, path: '/' });
-  // Clear refresh cookie for both '/' and the old narrow path (defensive)
   res.clearCookie('refresh_token', { ...base, path: '/' });
   res.clearCookie('refresh_token', { ...base, path: '/api/auth/refresh' });
 }
@@ -93,7 +89,6 @@ export class AuthController {
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // username + password (no email)
     const user = await this.authService.validateUser(dto.username, dto.password);
     const { access, refresh } = await this.authService.issueTokens(user.id);
 
