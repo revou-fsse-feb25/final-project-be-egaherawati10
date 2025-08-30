@@ -21,6 +21,8 @@ async function bootstrap() {
     transformOptions: { enableImplicitConversion: true },
   }));
 
+  // Original protected CORS setup
+  /*
   const fallback = ['http://localhost:3000', 'http://localhost:3001'];
   const raw = (process.env.CORS_ORIGIN ?? fallback.join(',')).trim();
   const allowAll = raw === '*' || raw.toLowerCase() === 'true';
@@ -36,6 +38,16 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
     exposedHeaders: ['Content-Length', 'X-Total-Count']
+  });
+  */
+
+  // Unprotected CORS (allow all)
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'Origin'],
+    exposedHeaders: ['Content-Length', 'X-Total-Count'],
   });
 
   // trust proxy so Secure cookies work behind Railway
